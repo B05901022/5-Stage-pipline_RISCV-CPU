@@ -2,6 +2,7 @@
 
 ### 5/31  Self Check_Point !!
 ### 6/3   Finish Baseline!! QQ...
+- we did it (?
 ### 6/6   first check point proposal
 
 ### MRdudu  Control_Unit
