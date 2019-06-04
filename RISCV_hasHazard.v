@@ -79,7 +79,7 @@ module RISCV_Pipeline(
     reg  [4:0]   IDEX_rs1_r;
     reg  [4:0]   IDEX_rs2_r;
     wire [4:0]   IDEX_rs1_w;
-    wire [4:0]   IDEX_rt_w;
+    wire [4:0]   IDEX_rs2_w;
     wire [31:0]  IDEX_pc_addr_w;
     wire [31:0]  IDEX_rdata1_w;
     wire [31:0]  IDEX_rdata2_w;
@@ -219,15 +219,15 @@ module RISCV_Pipeline(
     );
 
     // control unit dealing hazard  
-    assign IDEX_jal_w = (hazard_stall | j_flush)? 1'b0: jal;
-    assign IDEX_jalr_w = (hazard_stall | j_flush)? 1'b0: jalr;
-    assign IDEX_branch_w = (hazard_stall | j_flush)? 1'b0: branch;
-    assign IDEX_MemRead_w = (hazard_stall | j_flush)? 1'b0: memread;
-    assign IDEX_MemToReg_w = (hazard_stall | j_flush)? 1'b0: memtoreg;
-    assign IDEX_MemWrite_w = (hazard_stall | j_flush)? 1'b0: memwrite;
-    assign IDEX_alusrc_w = (hazard_stall | j_flush)? 1'b0: alusrc;
-    assign IDEX_RegWrite_w = (hazard_stall | j_flush)? 1'b0: regwrite;
-    assign IDEX_aluop_w = (hazard_stall | j_flush)? 2'b0: aluop;
+    assign IDEX_jal_w = ( j_flush)? 1'b0: jal;
+    assign IDEX_jalr_w = ( j_flush)? 1'b0: jalr;
+    assign IDEX_branch_w = ( j_flush)? 1'b0: branch;
+    assign IDEX_MemRead_w = ( j_flush)? 1'b0: memread;
+    assign IDEX_MemToReg_w = ( j_flush)? 1'b0: memtoreg;
+    assign IDEX_MemWrite_w = ( j_flush)? 1'b0: memwrite;
+    assign IDEX_alusrc_w = ( j_flush)? 1'b0: alusrc;
+    assign IDEX_RegWrite_w = ( j_flush)? 1'b0: regwrite;
+    assign IDEX_aluop_w = ( j_flush)? 2'b0: aluop;
 
 
     assign IDEX_pc_addr_w = IFID_pc_addr_r;
@@ -243,6 +243,7 @@ module RISCV_Pipeline(
     wire  [31:0]    forwarding_y; // choose data from forwarding unit 
     wire  [31:0]    alu_in_y;
 
+    // if jump, flush ex stage
     assign EXMEM_RegWrite_w = (j_flush)? 1'b0: IDEX_RegWrite_r;
     assign EXMEM_MemToReg_w = (j_flush)? 1'b0: IDEX_MemToReg_r;
     assign EXMEM_jal_w      = (j_flush)? 1'b0: IDEX_jal_r;
@@ -320,6 +321,9 @@ module RISCV_Pipeline(
         .stall(hazard_stall)
     );
 
+    wire not_s_or_b;
+    assign s_or_b = ( (IDEX_aluop_r == 2'b01) | IDEX_MemWrite_r )? 1'b1: 1'b0;
+  
     FORWARDING_UNIT u(
         .EXMEM_RD(EXMEM_rd_addr_r),
         .IDEX_RS(IDEX_rs1_r),
@@ -327,6 +331,7 @@ module RISCV_Pipeline(
         .MEMWB_RD(MEMWB_rd_addr_r),
         .EXMEM_RegWrite(EXMEM_RegWrite_r),
         .MEMWB_RegWrite(MEMWB_RegWrite_r),
+        .s_or_b(s_or_b),
         .FORWARD_A(forward_a),
         .FORWARD_B(forward_b)
     );
@@ -893,12 +898,10 @@ input [31:0] x, y;
 output jump; //if the condition is satisfy
 
 wire beq, bne;
-wire [32:0] sub_result;
 reg flag;
 
-assign sub_result = {x[31], x} + ~{y[31],y} + 1;
-assign beq = ~(|sub_result[31:0]);
-assign bne = ~beq;
+assign bne = (|(x^y));
+assign beq = ~bne;
 assign jump = (~flag)? 1'b0:
               (func3_0)? bne:
               beq;
