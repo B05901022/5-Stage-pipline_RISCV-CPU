@@ -251,12 +251,12 @@ module RISCV_Pipeline(
 
 
     // bubble
-    assign IDEX_pc_addr_w = (hazard_stall)? IDEX_pc_addr_r :IFID_pc_addr_r;
-    assign IDEX_func3_w   = (hazard_stall)? IDEX_func3_r   :IFID_inst_r[14:12];
-    assign IDEX_func7_w   = (hazard_stall)? IDEX_func7_r   :IFID_inst_r[30];
-    assign IDEX_rd_addr_w = (hazard_stall)? IDEX_rd_addr_r :IFID_inst_r[11:7];
-    assign IDEX_rs1_w = (hazard_stall)? IDEX_rs1_r :IFID_inst_r[19:15];
-    assign IDEX_rs2_w = (hazard_stall)? IDEX_rs2_r :IFID_inst_r[24:20];
+    assign IDEX_pc_addr_w = (hazard_stall)? 0 :IFID_pc_addr_r;
+    assign IDEX_func3_w   = (hazard_stall)? 0 :IFID_inst_r[14:12];
+    assign IDEX_func7_w   = (hazard_stall)? 0 :IFID_inst_r[30];
+    assign IDEX_rd_addr_w = (hazard_stall)? 0 :IFID_inst_r[11:7];
+    assign IDEX_rs1_w = (hazard_stall)? 0 :IFID_inst_r[19:15];
+    assign IDEX_rs2_w = (hazard_stall)? 0 :IFID_inst_r[24:20];
 
     // EX stage
 
