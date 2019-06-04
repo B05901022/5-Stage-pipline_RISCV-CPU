@@ -133,6 +133,8 @@ module RISCV_Pipeline(
     // for jal, jalr
     wire [31:0]  EXMEM_pc_add4_w;
     reg  [31:0]  EXMEM_pc_add4_r;
+ 
+    wire [3:0]   alu_ctrl;                         
 
     //---- MEM/WB -----------------------
     //WB regwrite, memToreg
@@ -162,6 +164,11 @@ module RISCV_Pipeline(
     wire [1:0]   forward_b_ex;
     wire [1:0]   forward_a_id; //id stage
     wire [1:0]   forward_b_id;
+
+    // choose data from forwarding unit 
+    wire  [31:0]    forwarding_x;
+    wire  [31:0]    forwarding_y; 
+
 
 //==== PC =============================
     wire [31:0] pc_w_no_hazard;
@@ -209,8 +216,8 @@ module RISCV_Pipeline(
     EX_branch br(
         .branch(IDEX_branch_r),
         .func3_0(IDEX_func3_r[0]),
-        .x(IDEX_rdata1_r),
-        .y(IDEX_rdata2_r),
+        .x(forwarding_x),
+        .y(forwarding_y),
         .jump(branch_flush)
     );
     ImmGen ig(
@@ -250,10 +257,6 @@ module RISCV_Pipeline(
     assign IDEX_rs2_w = IFID_inst_r[24:20];
 
     // EX stage
-    wire  [3:0]     alu_ctrl;
-    wire  [31:0]    alu_in_x;
-    wire  [31:0]    forwarding_y; // choose data from forwarding unit 
-    wire  [31:0]    alu_in_y;
 
     // if jump, flush ex stage
     assign EXMEM_RegWrite_w = (j_flush)? 1'b0: IDEX_RegWrite_r;
@@ -264,24 +267,26 @@ module RISCV_Pipeline(
     assign EXMEM_MemRead_w  = (j_flush)? 1'b0: IDEX_MemRead_r;
     assign EXMEM_MemWrite_w = (j_flush)? 1'b0: IDEX_MemWrite_r;
 
-    assign EXMEM_jalr_addr_w = IDEX_imm_r + alu_in_x; //alu_in_x is forwarding data1, which is the address jalr will go
+    assign EXMEM_jalr_addr_w = IDEX_imm_r + forwarding_x; //alu_in_x is forwarding data1, which is the address jalr will go
     assign EXMEM_branch_or_jal_addr_w = IDEX_imm_r + IDEX_pc_addr_r;
 
     assign EXMEM_wdata_w    = {forwarding_y[7:0], forwarding_y[15:8], forwarding_y[23:16], forwarding_y[31:24] };
     assign EXMEM_rd_addr_w  = IDEX_rd_addr_r;
     assign EXMEM_pc_add4_w  = IDEX_pc_addr_r + 4;
 
-    assign alu_in_x = (forward_a_ex[0])  ? wdata:
+
+    wire  [31:0]    alu_in_y;
+    assign forwarding_x = (forward_a_ex[0])  ? wdata:
                       (forward_a_ex[1])  ? EXMEM_alu_out_r:
                                            IDEX_rdata1_r;
     assign alu_in_y = (IDEX_alusrc_r) ? IDEX_imm_r: forwarding_y;
     assign forwarding_y = (forward_b_ex[0])  ? wdata:
                           (forward_b_ex[1])  ? EXMEM_alu_out_r:
                                                IDEX_rdata2_r;
-                                        
+                                               
     ALU alu(
         .ctrl   ( alu_ctrl )            ,
-        .x      ( alu_in_x )            , 
+        .x      ( forwarding_x )        , 
         .y      ( alu_in_y )            , 
         .out    ( EXMEM_alu_out_w )     
         // .zero   ( EXMEM_alu_zero_w )
