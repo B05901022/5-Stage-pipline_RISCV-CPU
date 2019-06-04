@@ -238,7 +238,7 @@ module RISCV_Pipeline(
     );
 
     // control unit dealing hazard 
-    // 0 when flush, stall when bubble 
+    // 0 when flush or bubble 
     assign IDEX_jal_w = ( j_flush | branch_flush | hazard_stall )?  1'b0: jal;
     assign IDEX_jalr_w = ( j_flush | branch_flush | hazard_stall )? 1'b0: jalr;
     assign IDEX_branch_w = ( j_flush | branch_flush | hazard_stall )? 1'b0: branch;

@@ -5,12 +5,11 @@ module FORWARDING_UNIT(
 	input  [4:0] MEMWB_RD,
 	input        EXMEM_RegWrite,
 	input        MEMWB_RegWrite,
-	output [1:0] FORWARD_A,
-	output [1:0] FORWARD_B
+	output reg [1:0] FORWARD_A,
+	output reg [1:0] FORWARD_B
 	);
 	
 	wire FLAG1, FLAG2, FLAG3, FLAG4;
-	reg [1:0] FORWARD_A, FORWARD_B;
 
 
 
