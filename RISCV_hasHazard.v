@@ -237,24 +237,26 @@ module RISCV_Pipeline(
         .ALUop      ( aluop )
     );
 
-    // control unit dealing hazard  
-    assign IDEX_jal_w = ( j_flush | branch_flush)? 1'b0: jal;
-    assign IDEX_jalr_w = ( j_flush | branch_flush)? 1'b0: jalr;
-    assign IDEX_branch_w = ( j_flush | branch_flush)? 1'b0: branch;
-    assign IDEX_MemRead_w = ( j_flush | branch_flush)? 1'b0: memread;
-    assign IDEX_MemToReg_w = ( j_flush | branch_flush)? 1'b0: memtoreg;
-    assign IDEX_MemWrite_w = ( j_flush | branch_flush)? 1'b0: memwrite;
-    assign IDEX_alusrc_w = ( j_flush | branch_flush)? 1'b0: alusrc;
-    assign IDEX_RegWrite_w = ( j_flush | branch_flush)? 1'b0: regwrite;
-    assign IDEX_aluop_w = ( j_flush | branch_flush)? 2'b0: aluop;
+    // control unit dealing hazard 
+    // 0 when flush, stall when bubble 
+    assign IDEX_jal_w = ( j_flush | branch_flush | hazard_stall )?  1'b0: jal;
+    assign IDEX_jalr_w = ( j_flush | branch_flush | hazard_stall )? 1'b0: jalr;
+    assign IDEX_branch_w = ( j_flush | branch_flush | hazard_stall )? 1'b0: branch;
+    assign IDEX_MemRead_w = ( j_flush | branch_flush | hazard_stall )? 1'b0: memread;
+    assign IDEX_MemToReg_w = ( j_flush | branch_flush | hazard_stall )? 1'b0: memtoreg;
+    assign IDEX_MemWrite_w = ( j_flush | branch_flush | hazard_stall )? 1'b0: memwrite;
+    assign IDEX_alusrc_w = ( j_flush | branch_flush | hazard_stall )? 1'b0: alusrc;
+    assign IDEX_RegWrite_w = ( j_flush | branch_flush | hazard_stall )? 1'b0: regwrite;
+    assign IDEX_aluop_w = ( j_flush | branch_flush | hazard_stall )? 2'b0: aluop;
 
 
-    assign IDEX_pc_addr_w = IFID_pc_addr_r;
-    assign IDEX_func3_w   = IFID_inst_r[14:12];
-    assign IDEX_func7_w   = IFID_inst_r[30];
-    assign IDEX_rd_addr_w = IFID_inst_r[11:7];
-    assign IDEX_rs1_w = IFID_inst_r[19:15];
-    assign IDEX_rs2_w = IFID_inst_r[24:20];
+    // bubble
+    assign IDEX_pc_addr_w = (hazard_stall)? IDEX_pc_addr_r :IFID_pc_addr_r;
+    assign IDEX_func3_w   = (hazard_stall)? IDEX_func3_r   :IFID_inst_r[14:12];
+    assign IDEX_func7_w   = (hazard_stall)? IDEX_func7_r   :IFID_inst_r[30];
+    assign IDEX_rd_addr_w = (hazard_stall)? IDEX_rd_addr_r :IFID_inst_r[11:7];
+    assign IDEX_rs1_w = (hazard_stall)? IDEX_rs1_r :IFID_inst_r[19:15];
+    assign IDEX_rs2_w = (hazard_stall)? IDEX_rs2_r :IFID_inst_r[24:20];
 
     // EX stage
 
@@ -319,7 +321,7 @@ module RISCV_Pipeline(
     assign  ICACHE_addr = pc_r[31:2];
     assign  ICACHE_wdata = 32'b0;
 
-    assign  IFID_inst_w = (hazard_stall)?         32'h00000013 :
+    assign  IFID_inst_w = (hazard_stall)?         IFID_inst_r  :
                           (branch_flush|j_flush)? 32'h0000007f : // flush control unit (bubble)
     { ICACHE_rdata[7:0], ICACHE_rdata[15:8], ICACHE_rdata[23:16], ICACHE_rdata[31:24] };
   
