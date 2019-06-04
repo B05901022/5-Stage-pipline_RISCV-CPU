@@ -158,8 +158,10 @@ module RISCV_Pipeline(
 
     //---- Hazard detection ----------
     wire         hazard_stall;
-    wire [1:0]   forward_a;
-    wire [1:0]   forward_b;
+    wire [1:0]   forward_a_ex; //mem stage
+    wire [1:0]   forward_b_ex;
+    wire [1:0]   forward_a_id; //id stage
+    wire [1:0]   forward_b_id;
 
 //==== PC =============================
     wire [31:0] pc_w_no_hazard;
@@ -174,7 +176,7 @@ module RISCV_Pipeline(
     assign j_flush = ( EXMEM_jal_r | EXMEM_jalr_r );
     assign pc_w_no_hazard = ( EXMEM_jal_r ) ? EXMEM_branch_or_jal_addr_r:
             ( EXMEM_jalr_r )        ? EXMEM_jalr_addr_r:
-            ( branch_flush & branch )? IDEX_imm_w + IDEX_pc_addr_w: //BRANCH is judge ID stage, it's priority is the least
+            ( branch_flush )? EXMEM_branch_or_jal_addr_w: //BRANCH is judge ID stage, it's priority is the least
             pc_r + 4;
     assign pc_w = (hazard_stall)? pc_r: pc_w_no_hazard;
     // ID stage
@@ -182,6 +184,9 @@ module RISCV_Pipeline(
     assign wdata =  (MEMWB_jal_r|MEMWB_jalr_r) ? MEMWB_pc_add4_r :
                     (MEMWB_MemToReg_r) ? {MEMWB_rdata_r[7:0], MEMWB_rdata_r[15:8], MEMWB_rdata_r[23:16], MEMWB_rdata_r[31:24]}:
                     MEMWB_alu_out_r;
+
+    wire [31:0] busX;
+    wire [31:0] busY;
     register_file reg_file(
         .clk        ( clk )                 ,
         .rst_n      ( rst_n )               ,
@@ -190,15 +195,22 @@ module RISCV_Pipeline(
         .busW       ( wdata )               ,
         .RX         ( IFID_inst_r[19:15] )  ,
         .RY         ( IFID_inst_r[24:20] )  ,
-        .busX       ( IDEX_rdata1_w )       ,
-        .busY       ( IDEX_rdata2_w )
+        .busX       ( busX )       ,
+        .busY       ( busY )
     );
-    // check branch at ID stage
-    ID_branch br(
-        .op(IFID_inst_r[6:2]),
-        .func3_0(IFID_inst_r[12]),
-        .x(IDEX_rdata1_w),
-        .y(IDEX_rdata2_w),
+
+    assign IDEX_rdata1_w = (forward_a_id[0])? wdata          :
+                           (forward_a_id[1])? EXMEM_alu_out_r:
+                                              busX           ; 
+    assign IDEX_rdata2_w = (forward_b_id[0])? wdata          :
+                           (forward_b_id[1])? EXMEM_alu_out_r:
+                                              busY           ; 
+    // check branch at EX stage
+    EX_branch br(
+        .branch(IDEX_branch_r),
+        .func3_0(IDEX_func3_r[0]),
+        .x(IDEX_rdata1_r),
+        .y(IDEX_rdata2_r),
         .jump(branch_flush)
     );
     ImmGen ig(
@@ -219,15 +231,15 @@ module RISCV_Pipeline(
     );
 
     // control unit dealing hazard  
-    assign IDEX_jal_w = ( j_flush)? 1'b0: jal;
-    assign IDEX_jalr_w = ( j_flush)? 1'b0: jalr;
-    assign IDEX_branch_w = ( j_flush)? 1'b0: branch;
-    assign IDEX_MemRead_w = ( j_flush)? 1'b0: memread;
-    assign IDEX_MemToReg_w = ( j_flush)? 1'b0: memtoreg;
-    assign IDEX_MemWrite_w = ( j_flush)? 1'b0: memwrite;
-    assign IDEX_alusrc_w = ( j_flush)? 1'b0: alusrc;
-    assign IDEX_RegWrite_w = ( j_flush)? 1'b0: regwrite;
-    assign IDEX_aluop_w = ( j_flush)? 2'b0: aluop;
+    assign IDEX_jal_w = ( j_flush | branch_flush)? 1'b0: jal;
+    assign IDEX_jalr_w = ( j_flush | branch_flush)? 1'b0: jalr;
+    assign IDEX_branch_w = ( j_flush | branch_flush)? 1'b0: branch;
+    assign IDEX_MemRead_w = ( j_flush | branch_flush)? 1'b0: memread;
+    assign IDEX_MemToReg_w = ( j_flush | branch_flush)? 1'b0: memtoreg;
+    assign IDEX_MemWrite_w = ( j_flush | branch_flush)? 1'b0: memwrite;
+    assign IDEX_alusrc_w = ( j_flush | branch_flush)? 1'b0: alusrc;
+    assign IDEX_RegWrite_w = ( j_flush | branch_flush)? 1'b0: regwrite;
+    assign IDEX_aluop_w = ( j_flush | branch_flush)? 2'b0: aluop;
 
 
     assign IDEX_pc_addr_w = IFID_pc_addr_r;
@@ -259,13 +271,13 @@ module RISCV_Pipeline(
     assign EXMEM_rd_addr_w  = IDEX_rd_addr_r;
     assign EXMEM_pc_add4_w  = IDEX_pc_addr_r + 4;
 
-    assign alu_in_x = (forward_a[0])  ? wdata:
-                      (forward_a[1])  ? EXMEM_alu_out_r:
-                                        IDEX_rdata1_r;
+    assign alu_in_x = (forward_a_ex[0])  ? wdata:
+                      (forward_a_ex[1])  ? EXMEM_alu_out_r:
+                                           IDEX_rdata1_r;
     assign alu_in_y = (IDEX_alusrc_r) ? IDEX_imm_r: forwarding_y;
-    assign forwarding_y = (forward_b[0])  ? wdata:
-                          (forward_b[1])  ? EXMEM_alu_out_r:
-                                            IDEX_rdata2_r;
+    assign forwarding_y = (forward_b_ex[0])  ? wdata:
+                          (forward_b_ex[1])  ? EXMEM_alu_out_r:
+                                               IDEX_rdata2_r;
                                         
     ALU alu(
         .ctrl   ( alu_ctrl )            ,
@@ -321,19 +333,28 @@ module RISCV_Pipeline(
         .stall(hazard_stall)
     );
 
-    wire not_s_or_b;
-    assign s_or_b = ( (IDEX_aluop_r == 2'b01) | IDEX_MemWrite_r )? 1'b1: 1'b0;
-  
-    FORWARDING_UNIT u(
+    // forward data to ex stage
+    FORWARDING_UNIT ex(
         .EXMEM_RD(EXMEM_rd_addr_r),
         .IDEX_RS(IDEX_rs1_r),
         .IDEX_RT(IDEX_rs2_r),
         .MEMWB_RD(MEMWB_rd_addr_r),
         .EXMEM_RegWrite(EXMEM_RegWrite_r),
         .MEMWB_RegWrite(MEMWB_RegWrite_r),
-        .s_or_b(s_or_b),
-        .FORWARD_A(forward_a),
-        .FORWARD_B(forward_b)
+        .FORWARD_A(forward_a_ex),
+        .FORWARD_B(forward_b_ex)
+    );
+
+    // forward data to id stage
+    FORWARDING_UNIT id(
+        .EXMEM_RD(EXMEM_rd_addr_r),
+        .IDEX_RS(IFID_inst_r[19:15]),
+        .IDEX_RT(IFID_inst_r[24:20]),
+        .MEMWB_RD(MEMWB_rd_addr_r),
+        .EXMEM_RegWrite(EXMEM_RegWrite_r),
+        .MEMWB_RegWrite(MEMWB_RegWrite_r),
+        .FORWARD_A(forward_a_id),
+        .FORWARD_B(forward_b_id)
     );
 
     always@(posedge clk or negedge rst_n) begin
@@ -884,15 +905,15 @@ module Control_unit(
 
 endmodule
 
-module ID_branch(
-    op,
+module EX_branch(
+    branch,
     func3_0,
     x,
     y,
     jump
 );
 
-input [4:0] op;
+input branch;
 input func3_0;
 input [31:0] x, y;
 output jump; //if the condition is satisfy
@@ -907,7 +928,7 @@ assign jump = (~flag)? 1'b0:
               beq;
 
 always@(*) begin 
-    if(op == 5'b11000)
+    if(branch)
         flag = 1'b1;
     else 
         flag = 1'b0;
