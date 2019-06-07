@@ -80,12 +80,12 @@ module RISCV_Pipeline(
     reg  [4:0]   IDEX_rs2_r;
     wire [4:0]   IDEX_rs1_w;
     wire [4:0]   IDEX_rs2_w;
-    wire [31:0]  IDEX_pc_addr_w;
+    wire [29:0]  IDEX_pc_addr_w;
     wire [31:0]  IDEX_rdata1_w;
     wire [31:0]  IDEX_rdata2_w;
     reg  [1:0]   IDEX_aluop_r;
     reg          IDEX_alusrc_r;
-    reg  [31:0]  IDEX_pc_addr_r;
+    reg  [29:0]  IDEX_pc_addr_r;
     reg  [31:0]  IDEX_rdata1_r;
     reg  [31:0]  IDEX_rdata2_r;
     // other data
@@ -181,6 +181,8 @@ module RISCV_Pipeline(
     wire    branch_flush; //judge if branch, if so, flush the following instrction
     wire    j_flush;
     assign j_flush = ( EXMEM_jal_r | EXMEM_jalr_r );
+
+    // could save flip flop by remove EXMEM_jalr_addr_r 
     assign pc_w_no_hazard = ( EXMEM_jal_r ) ? EXMEM_branch_or_jal_addr_r:
             ( EXMEM_jalr_r )        ? EXMEM_jalr_addr_r:
             ( branch_flush )? EXMEM_branch_or_jal_addr_w: //BRANCH is judge ID stage, it's priority is the least
@@ -250,13 +252,12 @@ module RISCV_Pipeline(
     assign IDEX_aluop_w = ( j_flush | branch_flush | hazard_stall )? 2'b0: aluop;
 
 
-    // bubble
-    assign IDEX_pc_addr_w = (hazard_stall)? 0 :IFID_pc_addr_r;
-    assign IDEX_func3_w   = (hazard_stall)? 0 :IFID_inst_r[14:12];
-    assign IDEX_func7_w   = (hazard_stall)? 0 :IFID_inst_r[30];
-    assign IDEX_rd_addr_w = (hazard_stall)? 0 :IFID_inst_r[11:7];
-    assign IDEX_rs1_w = (hazard_stall)? 0 :IFID_inst_r[19:15];
-    assign IDEX_rs2_w = (hazard_stall)? 0 :IFID_inst_r[24:20];
+    assign IDEX_pc_addr_w = IFID_pc_addr_r;
+    assign IDEX_func3_w   = IFID_inst_r[14:12];
+    assign IDEX_func7_w   = IFID_inst_r[30];
+    assign IDEX_rd_addr_w = IFID_inst_r[11:7];
+    assign IDEX_rs1_w = IFID_inst_r[19:15];
+    assign IDEX_rs2_w = IFID_inst_r[24:20];
 
     // EX stage
 
@@ -340,28 +341,20 @@ module RISCV_Pipeline(
         .stall(hazard_stall)
     );
 
-    // forward data to ex stage
+    // forward data to ID / EX stage
     FORWARDING_UNIT ex(
         .EXMEM_RD(EXMEM_rd_addr_r),
-        .IDEX_RS(IDEX_rs1_r),
-        .IDEX_RT(IDEX_rs2_r),
+        .IDEX_RS1(IDEX_rs1_r),
+        .IDEX_RS2(IDEX_rs2_r),
+        .IFID_RS1(IFID_inst_r[19:15]),
+        .IFID_RS2(IFID_inst_r[24:20]),
         .MEMWB_RD(MEMWB_rd_addr_r),
         .EXMEM_RegWrite(EXMEM_RegWrite_r),
         .MEMWB_RegWrite(MEMWB_RegWrite_r),
-        .FORWARD_A(forward_a_ex),
-        .FORWARD_B(forward_b_ex)
-    );
-
-    // forward data to id stage
-    FORWARDING_UNIT id(
-        .EXMEM_RD(EXMEM_rd_addr_r),
-        .IDEX_RS(IFID_inst_r[19:15]),
-        .IDEX_RT(IFID_inst_r[24:20]),
-        .MEMWB_RD(MEMWB_rd_addr_r),
-        .EXMEM_RegWrite(EXMEM_RegWrite_r),
-        .MEMWB_RegWrite(MEMWB_RegWrite_r),
-        .FORWARD_A(forward_a_id),
-        .FORWARD_B(forward_b_id)
+        .FORWARD_A_ex(forward_a_ex),
+        .FORWARD_B_ex(forward_b_ex),
+        .FORWARD_A_id(forward_a_id),
+        .FORWARD_B_id(forward_b_id)
     );
 
     always@(posedge clk or negedge rst_n) begin
