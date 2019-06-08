@@ -175,3 +175,14 @@ module DecompressionUnit(
 	end
 
 endmodule
+
+module InstructionAnalyzer(
+	input  [31:0] Instruction_Fetch,
+	output [31:0] Instruction_Analyzed,
+	output [31:0] PC_add //Add 4 or 2
+);
+	/*
+	Caution!!!Little Endian
+	*/
+	
+endmodule
