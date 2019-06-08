@@ -3,7 +3,7 @@ module HAZARD_DETECTION_UNIT(
 	input [4:0] IFID_RS,
 	input [4:0] IFID_RT,
 	input       MemRead,
-	output      stall
+	output  reg    stall
 	);
 	
 	/*
