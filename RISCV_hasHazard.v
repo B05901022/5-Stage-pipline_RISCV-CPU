@@ -182,11 +182,11 @@ module RISCV_Pipeline(
     wire    j_flush;
     assign j_flush = ( IDEX_jal_r | IDEX_jalr_r );
 
-    // could save flip flop by remove EXMEM_jalr_addr_r 
+    // decide next pc
     assign pc_w_no_hazard = ( IDEX_jal_r | branch_flush ) ? EXMEM_branch_or_jal_addr_w:
             ( IDEX_jalr_r )        ? EXMEM_jalr_addr_w:
-            // ( branch_flush )? EXMEM_branch_or_jal_addr_w: //BRANCH is judge ID stage, it's priority is the least
             pc_r + 4;
+
     assign pc_w = (hazard_stall)? pc_r: pc_w_no_hazard;
     // ID stage
     wire [31:0] wdata;
