@@ -180,12 +180,12 @@ module RISCV_Pipeline(
     // PC
     wire    branch_flush; //judge if branch, if so, flush the following instrction
     wire    j_flush;
-    assign j_flush = ( EXMEM_jal_r | EXMEM_jalr_r );
+    assign j_flush = ( IDEX_jal_r | IDEX_jalr_r );
 
     // could save flip flop by remove EXMEM_jalr_addr_r 
-    assign pc_w_no_hazard = ( EXMEM_jal_r ) ? EXMEM_branch_or_jal_addr_r:
-            ( EXMEM_jalr_r )        ? EXMEM_jalr_addr_r:
-            ( branch_flush )? EXMEM_branch_or_jal_addr_w: //BRANCH is judge ID stage, it's priority is the least
+    assign pc_w_no_hazard = ( IDEX_jal_r | branch_flush ) ? EXMEM_branch_or_jal_addr_w:
+            ( IDEX_jalr_r )        ? EXMEM_jalr_addr_w:
+            // ( branch_flush )? EXMEM_branch_or_jal_addr_w: //BRANCH is judge ID stage, it's priority is the least
             pc_r + 4;
     assign pc_w = (hazard_stall)? pc_r: pc_w_no_hazard;
     // ID stage
@@ -262,13 +262,13 @@ module RISCV_Pipeline(
     // EX stage
 
     // if jump, flush ex stage
-    assign EXMEM_RegWrite_w = (j_flush)? 1'b0: IDEX_RegWrite_r;
-    assign EXMEM_MemToReg_w = (j_flush)? 1'b0: IDEX_MemToReg_r;
-    assign EXMEM_jal_w      = (j_flush)? 1'b0: IDEX_jal_r;
-    assign EXMEM_jalr_w     = (j_flush)? 1'b0: IDEX_jalr_r;
-    assign EXMEM_branch_w   = (j_flush)? 1'b0: IDEX_branch_r;
-    assign EXMEM_MemRead_w  = (j_flush)? 1'b0: IDEX_MemRead_r;
-    assign EXMEM_MemWrite_w = (j_flush)? 1'b0: IDEX_MemWrite_r;
+    assign EXMEM_RegWrite_w =  IDEX_RegWrite_r;
+    assign EXMEM_MemToReg_w =  IDEX_MemToReg_r;
+    assign EXMEM_jal_w      =  IDEX_jal_r;
+    assign EXMEM_jalr_w     =  IDEX_jalr_r;
+    assign EXMEM_branch_w   =  IDEX_branch_r;
+    assign EXMEM_MemRead_w  =  IDEX_MemRead_r;
+    assign EXMEM_MemWrite_w =  IDEX_MemWrite_r;
 
     assign EXMEM_jalr_addr_w = IDEX_imm_r + forwarding_x; //alu_in_x is forwarding data1, which is the address jalr will go
     assign EXMEM_branch_or_jal_addr_w = IDEX_imm_r + IDEX_pc_addr_r;

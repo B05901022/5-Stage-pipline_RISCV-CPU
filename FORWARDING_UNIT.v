@@ -15,7 +15,7 @@ module FORWARDING_UNIT(
 	
 	wire FLAG1, FLAG2, FLAG3, FLAG4;
 	wire FLAG5, FLAG6, FLAG7, FLAG8;
-
+	wire FLAG_RS1_ZERO, FLAG_RS2_ZERO;
 
 
 	assign FLAG1 = (EXMEM_RD == IDEX_RS1);
@@ -28,18 +28,31 @@ module FORWARDING_UNIT(
 	assign FLAG7 = (EXMEM_RD == IFID_RS2);
 	assign FLAG8 = (MEMWB_RD == IFID_RS2);
 
+	assign FLAG_RS1_ZERO = (IFID_RS1 == 0)? 1'b1: 1'b0;
+	assign FLAG_RS2_ZERO = (IFID_RS2 == 0)? 1'b1: 1'b0;
+
 	always@(*) begin
 		FORWARD_A_ex[1] = EXMEM_RegWrite && FLAG1;
 		FORWARD_A_ex[0] = MEMWB_RegWrite && FLAG2;
 
 		FORWARD_B_ex[1] = EXMEM_RegWrite && FLAG3;
 		FORWARD_B_ex[0] = MEMWB_RegWrite && FLAG4;
+		
+		if (~FLAG_RS1_ZERO) begin
+			FORWARD_A_id[1] = EXMEM_RegWrite && FLAG5;
+			FORWARD_A_id[0] = MEMWB_RegWrite && FLAG6;
+		end
+		else begin
+			FORWARD_A_id = 2'b00;
+		end
 
-		FORWARD_A_id[1] = EXMEM_RegWrite && FLAG5;
-		FORWARD_A_id[0] = MEMWB_RegWrite && FLAG6;
-
-		FORWARD_B_id[1] = EXMEM_RegWrite && FLAG7;
-		FORWARD_B_id[0] = MEMWB_RegWrite && FLAG8;
+		if (~FLAG_RS2_ZERO) begin
+			FORWARD_B_id[1] = EXMEM_RegWrite && FLAG7;
+			FORWARD_B_id[0] = MEMWB_RegWrite && FLAG8;
+		end
+		else begin
+			FORWARD_B_id = 2'b00;
+		end
 	end
 
 endmodule
