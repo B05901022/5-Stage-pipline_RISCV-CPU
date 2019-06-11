@@ -186,7 +186,7 @@ module InstructionAnalyzer(
 	// === I/O ===
 	input         PC_1; //PC[1] for checking if now using half block
 	input  [31:0] INSTR; //the whole block fetched from cache/memory
-	output [31:0] PC_add; //addition for PC
+	output [31:0] PC_add; //addition to PC for next stage
 	output [31:0] INSTR_o; //Instruction send to ID-stage
 
 	// === Wires ===
@@ -236,7 +236,6 @@ module InstructionAnalyzer(
 		INSTR_c      = 16'b0;
 		INSTR_save_w = 16'b0;
 		stall_w      = 1'b0;
-		INSTR_save_w = 16'b0;
 
 		if ( stall_r ) begin
 			PC_add = 0; //PC_w = PC_r;
