@@ -1,8 +1,10 @@
-`include "DECOMPRESSIONUNIT"
+`include "DECOMPRESSIONUNIT.v"
 
 //First method: NOP
 
 module FIRSTMETHOD(
+	clk,
+	rst_n,
 	PC_1,
 	INSTR,
 	PC_add,
@@ -112,6 +114,8 @@ endmodule
 //Second Method: Pre-feed PC to obtain new information
 
 module SECONDMETHOD(
+	clk,
+	rst_n,
 	PCN_1,
 	INSTR,
 	PCN_add,
@@ -222,5 +226,3 @@ module SECONDMETHOD(
 endmodule
 
 //Third Method: Half-block cache
-module THIRDMETHOD();
-endmodule

@@ -17,7 +17,7 @@ module HAZARD_DETECTION_UNIT(
 		Ctrl_Sel = 1'b1;
 	end
 	*/
-	reg stall;
+	//reg stall;
 	always@(*) begin
 		if (MemRead && ( (IDEX_RT == IFID_RS) | (IDEX_RT == IFID_RT) ) ) begin
 			stall = 1'b1;
