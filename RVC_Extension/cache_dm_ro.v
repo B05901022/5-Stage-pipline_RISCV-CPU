@@ -242,7 +242,7 @@ module cache_comp(
 
     //for cross block error
     reg cross_block_error_r, cross_block_error_w;
-    wire [27:0] next_block_addr;
+    wire [30:0] next_block_addr;
 
     //for decompression
     wire [31:0] decomp_instr;
@@ -291,7 +291,7 @@ module cache_comp(
 	assign proc_rdata = rdata;
 	assign proc_stall = stall;
 	assign next_half_block = proc_addr[5:0] + 6'd1;
-	assign next_block_addr = proc_addr[30:3] + 28'd1;
+	assign next_block_addr = proc_addr + 31'd1;
 
 	always@(*) begin
 	    //==== Default value ==================================
@@ -318,7 +318,7 @@ module cache_comp(
 	                    // hit
 	                    if ( &word_r[proc_addr[5:0]][9:8] ) begin
 	                    	//32-bit instruction
-	                    	if ( (&proc_addr[2:0]) && ( tag_r[next_half_block[5:3]] != proc_addr[30:6]) ) begin
+	                    	if ( (&proc_addr[2:0]) && ( tag_r[next_half_block[5:3]] != next_half_block[30:6]) ) begin
 	                    		//next instruction crossed block and tag of next block is WRONG
 	                    		stall = 1'b1;
 	                    		cross_block_error_w = 1'b1;
@@ -327,8 +327,8 @@ module cache_comp(
 	                    		//or next instruction didn't crossed block
 	                    		stall = 1'b0;
 	                    		hit_or_miss = 1'b1;
-	                    		rdata = {word_r[next_half_block][7:0], word_r[next_half_block][15:8],
-	                    				 word_r[proc_addr[5: 0]][7:0], word_r[proc_addr[5: 0]][15:8]}; //de-endian
+	                    		rdata = {word_r[next_half_block[5:0]][7:0], word_r[next_half_block[5:0]][15:8],
+	                    				 word_r[proc_addr[5:0]][7:0], word_r[proc_addr[5:0]][15:8]}; //de-endian
 	                    	end
 	                    end else begin
 	                    	//16-bit instruction
@@ -351,26 +351,45 @@ module cache_comp(
 	            begin
 	                stall = 1'b1;
 	                if ( mem_ready ) begin
-	                    case ( proc_addr[5:3] ) 
-	                        3'd0: tag_w[0] = proc_addr[30:6];
-	                        3'd1: tag_w[1] = proc_addr[30:6];
-	                        3'd2: tag_w[2] = proc_addr[30:6];
-	                        3'd3: tag_w[3] = proc_addr[30:6];
-	                        3'd4: tag_w[4] = proc_addr[30:6];
-	                        3'd5: tag_w[5] = proc_addr[30:6];
-	                        3'd6: tag_w[6] = proc_addr[30:6];
-	                        3'd7: tag_w[7] = proc_addr[30:6];
-	                    endcase
-	                    valid_w[proc_addr[5:3]] = 1'b1;
-	                    {{word_w[{proc_addr[5:3], 3'b110}]}, {word_w[{proc_addr[5:3], 3'b111}]},
-	                     {word_w[{proc_addr[5:3], 3'b100}]}, {word_w[{proc_addr[5:3], 3'b101}]},
-	                     {word_w[{proc_addr[5:3], 3'b010}]}, {word_w[{proc_addr[5:3], 3'b011}]},
-	                     {word_w[{proc_addr[5:3], 3'b000}]}, {word_w[{proc_addr[5:3], 3'b001}]}} = mem_rdata;
-	                     //blocks that contains 16/32-bit information should be first
+	                	if (cross_block_error_r) begin
+	                		case ( proc_addr[5:3] ) 
+		                        3'd0: tag_w[1] = next_half_block[30:6];
+		                        3'd1: tag_w[2] = next_half_block[30:6];
+		                        3'd2: tag_w[3] = next_half_block[30:6];
+		                        3'd3: tag_w[4] = next_half_block[30:6];
+		                        3'd4: tag_w[5] = next_half_block[30:6];
+		                        3'd5: tag_w[6] = next_half_block[30:6];
+		                        3'd6: tag_w[7] = next_half_block[30:6];
+		                        3'd7: tag_w[0] = next_half_block[30:6];
+		                    endcase
+		                    valid_w[next_half_block[5:3]] = 1'b1;
+		                    {{word_w[{next_half_block[5:3], 3'b110}]}, {word_w[{next_half_block[5:3], 3'b111}]},
+		                     {word_w[{next_half_block[5:3], 3'b100}]}, {word_w[{next_half_block[5:3], 3'b101}]},
+		                     {word_w[{next_half_block[5:3], 3'b010}]}, {word_w[{next_half_block[5:3], 3'b011}]},
+		                     {word_w[{next_half_block[5:3], 3'b000}]}, {word_w[{next_half_block[5:3], 3'b001}]}} = mem_rdata;
+		                     //blocks that contains 16/32-bit information should be first
+	                	end else begin
+		                    case ( proc_addr[5:3] ) 
+		                        3'd0: tag_w[0] = proc_addr[30:6];
+		                        3'd1: tag_w[1] = proc_addr[30:6];
+		                        3'd2: tag_w[2] = proc_addr[30:6];
+		                        3'd3: tag_w[3] = proc_addr[30:6];
+		                        3'd4: tag_w[4] = proc_addr[30:6];
+		                        3'd5: tag_w[5] = proc_addr[30:6];
+		                        3'd6: tag_w[6] = proc_addr[30:6];
+		                        3'd7: tag_w[7] = proc_addr[30:6];
+		                    endcase
+		                    valid_w[proc_addr[5:3]] = 1'b1;
+		                    {{word_w[{proc_addr[5:3], 3'b110}]}, {word_w[{proc_addr[5:3], 3'b111}]},
+		                     {word_w[{proc_addr[5:3], 3'b100}]}, {word_w[{proc_addr[5:3], 3'b101}]},
+		                     {word_w[{proc_addr[5:3], 3'b010}]}, {word_w[{proc_addr[5:3], 3'b011}]},
+		                     {word_w[{proc_addr[5:3], 3'b000}]}, {word_w[{proc_addr[5:3], 3'b001}]}} = mem_rdata;
+		                     //blocks that contains 16/32-bit information should be first
+		                end
 	                end
 	                else begin
 	                	cross_block_error_w = cross_block_error_r;
-	                    mem_addr = (cross_block_error_r) ? next_block_addr : proc_addr[30:3];
+	                    mem_addr = (cross_block_error_r) ? next_block_addr[30:3] : proc_addr[30:3];
 	                    mem_read =  1'b1;
 	                end
 	            end

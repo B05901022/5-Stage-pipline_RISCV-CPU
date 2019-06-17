@@ -16,9 +16,9 @@ module CHIP (	clk,
 				mem_ready_D,
 //----------for slow_memI------------
 				mem_read_I,
-				//mem_write_I,
+				mem_write_I,
 				mem_addr_I,
-				//mem_wdata_I,
+				mem_wdata_I,
 				mem_rdata_I,
 				mem_ready_I,
 //----------for TestBed--------------				
@@ -37,9 +37,9 @@ input	[127:0]	mem_rdata_D;
 input			mem_ready_D;
 //--------------------------
 output			mem_read_I;
-//output			mem_write_I;
+output			mem_write_I;
 output	[31:4]	mem_addr_I;
-//output	[127:0]	mem_wdata_I;
+output	[127:0]	mem_wdata_I;
 input	[127:0]	mem_rdata_I;
 input			mem_ready_I;
 //----------for TestBed--------------
@@ -71,6 +71,8 @@ wire [31:0] DCACHE_rdata;
 	// 2. data cache
 	// 3. instruction cache
 
+	assign mem_write_I = 1'b0;
+	assign mem_wdata_I = 128'b0;
 
 	RISCV_Pipeline i_RISCV(
 		// control interface

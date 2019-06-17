@@ -73,9 +73,9 @@ module Final_tb;
 				mem_ready_D,
 //----------for slow_memI------------
 				mem_read_I,
-				//mem_write_I,
+				mem_write_I,
 				mem_addr_I,
-				//mem_wdata_I,
+				mem_wdata_I,
 				mem_rdata_I,
 				mem_ready_I,
 //----------for TestBed--------------				
@@ -97,9 +97,9 @@ module Final_tb;
 	slow_memory slow_memI(
 		.clk        (clk)           ,
 		.mem_read   (mem_read_I)    ,
-		.mem_write  (1'b0),//mem_write_I)   ,
+		.mem_write  (mem_write_I)   , //(1'b0)
 		.mem_addr   (mem_addr_I)    ,
-		.mem_wdata  (128'b0),//mem_wdata_I)   ,
+		.mem_wdata  (mem_wdata_I)   ,//(128'b0),//
 		.mem_rdata  (mem_rdata_I)   ,
 		.mem_ready  (mem_ready_I)
 	);
@@ -130,7 +130,7 @@ module Final_tb;
 		// waveform dump
 	    // $dumpfile("Final.vcd");
 	    // $dumpvars;
-	    $fsdbDumpfile("Final.fsdb");			
+	    $fsdbDumpfile("Final_comp.fsdb");			
 		$fsdbDumpvars(0,Final_tb,"+mda");
 		$fsdbDumpvars;
 	
