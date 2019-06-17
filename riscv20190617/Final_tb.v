@@ -3,7 +3,7 @@
 
 `timescale 1 ns/10 ps
 
-`define CYCLE 10 // You can modify your clock frequency
+`define CYCLE 3.7 // You can modify your clock frequency
 
 `define DMEM_INIT "D_mem"
 `define SDFFILE   "./CHIP_syn.sdf"	// Modify your SDF file name
@@ -97,9 +97,9 @@ module Final_tb;
 	slow_memory slow_memI(
 		.clk        (clk)           ,
 		.mem_read   (mem_read_I)    ,
-		.mem_write  (mem_write_I)   , //(1'b0)
+		.mem_write  (mem_write_I)   ,
 		.mem_addr   (mem_addr_I)    ,
-		.mem_wdata  (mem_wdata_I)   ,//(128'b0)
+		.mem_wdata  (mem_wdata_I)   ,
 		.mem_rdata  (mem_rdata_I)   ,
 		.mem_ready  (mem_ready_I)
 	);
@@ -130,7 +130,7 @@ module Final_tb;
 		// waveform dump
 	    // $dumpfile("Final.vcd");
 	    // $dumpvars;
-	    $fsdbDumpfile("Final_comp.fsdb");			
+	    $fsdbDumpfile("Final.fsdb");			
 		$fsdbDumpvars(0,Final_tb,"+mda");
 		$fsdbDumpvars;
 	
@@ -139,7 +139,7 @@ module Final_tb;
 		#(`CYCLE*0.2) rst_n = 1'b0;
 		#(`CYCLE*8.5) rst_n = 1'b1;
      
-		#(`CYCLE*10000) // calculate clock cycles for all operation (you can modify it)
+		#(`CYCLE*100000) // calculate clock cycles for all operation (you can modify it)
 		$display("============================================================================");
 		$display("\n           Error!!! There is something wrong with your code ...!          ");
 		$display("\n                       The test result is .....FAIL                     \n");

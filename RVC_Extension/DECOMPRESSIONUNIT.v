@@ -36,6 +36,7 @@ module DecompressionUnit(
 		case (orig_instr[1:0])
 			2'b00: begin
 				//C.SW, C.LW
+				
 				decomp_instr[30:27] = 4'b0; //Immediate zero-extention
 				decomp_instr[26]    = orig_instr[5]; //Offset[6]
 				decomp_instr[25]    = orig_instr[12]; //Offset[5]
@@ -61,6 +62,7 @@ module DecompressionUnit(
 					decomp_instr[11:10] = 2'b01; //only x8~x15
 					decomp_instr[9:7]   = orig_instr[4:2]; //x8~x15
 				end
+				
 			end
 			2'b01: begin
 				//C.NOP, C.ADDI, C.SRLI, C.SRAI, C.ANDI, C.JAL, C.J, C.BEQZ, C.BNEZ

@@ -1,10 +1,9 @@
 // Top module of your design, you cannot modify this module!!
-`include "cache_dm.v"
-`include "RISCV_hasHazard.v"
-`include "HAZARD_DETECTION_UNIT.v"
-`include "FORWARDING_UNIT.v"
-`include "cache_dm_ro.v" //
-
+`include "./RISCV_hasHazard.v"
+`include "./FORWARDING_UNIT.v"
+`include "./HAZARD_DETECTION_UNIT.v"
+`include "./cache_dm.v"
+`include "./cache_dm_ro.v"
 module CHIP (	clk,
 				rst_n,
 //----------for slow_memD------------
@@ -50,12 +49,12 @@ output			DCACHE_wen;
 
 // wire declaration
 wire        ICACHE_ren;
-//wire        ICACHE_wen;
+wire        ICACHE_wen;
 wire [30:0] ICACHE_addr;
-//wire [31:0] ICACHE_wdata;
+wire [31:0] ICACHE_wdata;
 wire        ICACHE_stall;
 wire [31:0] ICACHE_rdata;
-wire        ICACHE_pcadd;
+wire        ICACHE_pcadd; //RVC
 
 wire        DCACHE_ren;
 wire        DCACHE_wen;
@@ -71,21 +70,17 @@ wire [31:0] DCACHE_rdata;
 	// 2. data cache
 	// 3. instruction cache
 
-	assign mem_write_I = 1'b0;
-	assign mem_wdata_I = 128'b0;
 
 	RISCV_Pipeline i_RISCV(
 		// control interface
 		.clk            (clk)           , 
 		.rst_n          (rst_n)         ,
 //----------I cache interface-------		
-		//.ICACHE_ren     (ICACHE_ren)    ,
-		//.ICACHE_wen     (ICACHE_wen)    ,
+		.ICACHE_ren     (ICACHE_ren)    ,
 		.ICACHE_addr    (ICACHE_addr)   ,
-		//.ICACHE_wdata   (ICACHE_wdata)  ,
 		.ICACHE_stall   (ICACHE_stall)  ,
 		.ICACHE_rdata   (ICACHE_rdata)  ,
-		.ICACHE_pcadd   (ICACHE_pcadd)  ,
+		.ICACHE_pcadd   (mem_pcadd_I)   , //RVC
 //----------D cache interface-------
 		.DCACHE_ren     (DCACHE_ren)    ,
 		.DCACHE_wen     (DCACHE_wen)    ,
@@ -113,21 +108,19 @@ wire [31:0] DCACHE_rdata;
         .mem_ready  (mem_ready_D)
 	);
 
-	cache_comp I_cache( //
+	cache_comp I_cache(
         .clk        (clk)         ,
         .proc_reset (~rst_n)      ,
-        //.proc_read  (ICACHE_ren)  ,
-        //.proc_write (ICACHE_wen)  ,
+        .proc_read  (ICACHE_ren)  ,
         .proc_addr  (ICACHE_addr) ,
         .proc_rdata (ICACHE_rdata),
-        //.proc_wdata (ICACHE_wdata),
         .proc_stall (ICACHE_stall),
         .mem_read   (mem_read_I)  ,
-        //.mem_write  (mem_write_I) ,
+		.mem_write	(mem_write_I) ,
         .mem_addr   (mem_addr_I)  ,
-        //.mem_wdata  (mem_wdata_I) ,
+		.mem_wdata	(mem_wdata_I) ,
         .mem_rdata  (mem_rdata_I) ,
         .mem_ready  (mem_ready_I) ,
-        .pc_add     (ICACHE_pcadd)
+        .pcadd      (mem_pcadd_I) //RVC
 	);
 endmodule

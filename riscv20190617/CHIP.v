@@ -3,7 +3,7 @@
 `include "./FORWARDING_UNIT.v"
 `include "./HAZARD_DETECTION_UNIT.v"
 `include "./cache_dm.v"
-`include "./cache_ro.v"
+`include "./cache_dm_ro.v"
 module CHIP (	clk,
 				rst_n,
 //----------for slow_memD------------
@@ -106,7 +106,7 @@ wire [31:0] DCACHE_rdata;
         .mem_ready  (mem_ready_D)
 	);
 
-	cache I_cache(
+	cache_read_only I_cache(
         .clk        (clk)         ,
         .proc_reset (~rst_n)      ,
         .proc_read  (ICACHE_ren)  ,
