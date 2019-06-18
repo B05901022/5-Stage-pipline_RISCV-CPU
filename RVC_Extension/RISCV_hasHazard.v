@@ -9,6 +9,7 @@ module RISCV_Pipeline(
 	ICACHE_addr     ,
 	ICACHE_stall    ,
 	ICACHE_rdata    ,
+    ICACHE_pcadd    ,
 //----------D cache interface-------
 	DCACHE_ren      ,
 	DCACHE_wen      ,
@@ -25,9 +26,10 @@ module RISCV_Pipeline(
     //----------I cache interface-------
     output          ICACHE_ren;
     assign  ICACHE_ren = 1'b1;
-	output  [29:0]  ICACHE_addr;
+	output  [30:0]  ICACHE_addr;
 	input           ICACHE_stall;
 	input   [31:0]  ICACHE_rdata;
+    input           ICACHE_pcadd;
     //----------D cache interface-------
     output          DCACHE_ren;
     output	        DCACHE_wen;
@@ -42,6 +44,8 @@ module RISCV_Pipeline(
     wire [31:0]  IFID_inst_w; 
     reg  [29:0]  IFID_pc_addr_r;
     reg  [31:0]  IFID_inst_r; 
+    reg          IFID_pcadd_r;
+    wire         IFID_pcadd_w;
     //---- ID/EX ------------------------
     //WB regwrite, memToreg
     wire regwrite;
@@ -93,7 +97,9 @@ module RISCV_Pipeline(
     reg  [31:0]  IDEX_imm_r;
     reg          IDEX_func7_r;
     reg  [2:0]   IDEX_func3_r;
-    reg  [4:0]   IDEX_rd_addr_r;  
+    reg  [4:0]   IDEX_rd_addr_r;
+    reg          IDEX_pcadd_r;
+    wire         IDEX_pcadd_w;  
 
     //---- EX/MEM -----------------------
     //WB regwrite, memToreg
@@ -180,9 +186,11 @@ module RISCV_Pipeline(
     assign j_flush = ( IDEX_jal_r | IDEX_jalr_r );
 
     // decide next pc
+    wire [31:0] IF_stage_add_4_or_2;
+    assign IF_stage_add_4_or_2 = (ICACHE_pcadd) ? 4 : 2;
     assign pc_w_no_hazard = ( IDEX_jal_r | branch_flush ) ? EXMEM_branch_or_jal_addr_w:
             ( IDEX_jalr_r )        ? EXMEM_jalr_addr_w:
-            pc_r + 4;
+            pc_r + IF_stage_add_4_or_2;
 
     assign pc_w = (hazard_stall)? pc_r: pc_w_no_hazard;
     // ID stage
@@ -254,6 +262,7 @@ module RISCV_Pipeline(
     assign IDEX_rd_addr_w = IFID_inst_r[11:7];
     assign IDEX_rs1_w = IFID_inst_r[19:15];
     assign IDEX_rs2_w = IFID_inst_r[24:20];
+    assign IDEX_pcadd_w = IFID_pcadd_r;
 
     // EX stage
 
@@ -273,10 +282,11 @@ module RISCV_Pipeline(
                                (forward_a_ex[0])? IDEX_imm_r + wdata          :
                                                   IDEX_imm_r + IDEX_rdata1_r  ;
 
-
+    wire [31:0] EX_stage_add_4_or_2;
+    assign EX_stage_add_4_or_2 = (IDEX_pcadd_r) ? 4 : 2;
     assign EXMEM_wdata_w    = {forwarding_y[7:0], forwarding_y[15:8], forwarding_y[23:16], forwarding_y[31:24] };
     assign EXMEM_rd_addr_w  = IDEX_rd_addr_r;
-    assign EXMEM_pc_add4_w  = IDEX_pc_addr_r + 4;
+    assign EXMEM_pc_add4_w  = IDEX_pc_addr_r + EX_stage_add_4_or_2;
 
 
     wire  [31:0]    alu_in_y;
@@ -318,13 +328,14 @@ module RISCV_Pipeline(
     assign  MEMWB_jal_w = EXMEM_jal_r;
     assign  MEMWB_jalr_w = EXMEM_jalr_r;
 
-    assign  ICACHE_addr = pc_r[31:2];
+    assign  ICACHE_addr = pc_r[31:1];
 
     assign  IFID_inst_w = (hazard_stall)?         IFID_inst_r  :
                           (branch_flush|j_flush)? 32'h0000007f : // flush control unit (bubble)
     { ICACHE_rdata[7:0], ICACHE_rdata[15:8], ICACHE_rdata[23:16], ICACHE_rdata[31:24] };
   
     assign  IFID_pc_addr_w = pc_r;
+    assign  IFID_pcadd_w = ICACHE_pcadd;
 
     // proc_stall
     wire    proc_stall;
@@ -407,6 +418,7 @@ module RISCV_Pipeline(
 				pc_r					<= pc_r;
                 IFID_pc_addr_r          <= IFID_pc_addr_r;
                 IFID_inst_r             <= IFID_inst_r;
+                IFID_pcadd_r            <= IFID_pcadd_r;
                 IDEX_RegWrite_r         <= IDEX_RegWrite_r;
                 IDEX_MemToReg_r         <= IDEX_MemToReg_r;
                 IDEX_jal_r              <= IDEX_jal_r;
@@ -425,6 +437,7 @@ module RISCV_Pipeline(
                 IDEX_func7_r            <= IDEX_func7_r;
                 IDEX_func3_r            <= IDEX_func3_r;
                 IDEX_rd_addr_r          <= IDEX_rd_addr_r;
+                IDEX_pcadd_r            <= IDEX_pcadd_r;
                 EXMEM_RegWrite_r        <= EXMEM_RegWrite_r;
                 EXMEM_MemToReg_r        <= EXMEM_MemToReg_r;
                 EXMEM_jal_r             <= EXMEM_jal_r;
@@ -452,6 +465,7 @@ module RISCV_Pipeline(
 				pc_r					<= pc_w;
                 IFID_pc_addr_r          <= IFID_pc_addr_w;
                 IFID_inst_r             <= IFID_inst_w;
+                IFID_pcadd_r            <= IFID_pcadd_w;
                 IDEX_RegWrite_r         <= IDEX_RegWrite_w;
                 IDEX_MemToReg_r         <= IDEX_MemToReg_w;
                 IDEX_jal_r              <= IDEX_jal_w;
@@ -470,6 +484,7 @@ module RISCV_Pipeline(
                 IDEX_func7_r            <= IDEX_func7_w;
                 IDEX_func3_r            <= IDEX_func3_w;
                 IDEX_rd_addr_r          <= IDEX_rd_addr_w;
+                IDEX_pcadd_r            <= IDEX_pcadd_w;
                 EXMEM_RegWrite_r        <= EXMEM_RegWrite_w;
                 EXMEM_MemToReg_r        <= EXMEM_MemToReg_w;
                 EXMEM_jal_r             <= EXMEM_jal_w;

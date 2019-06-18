@@ -1,6 +1,6 @@
 module DecompressionUnit(
 	input  [15:0] orig_instr,
-	output [31:0] decomp_instr
+	output reg [31:0] decomp_instr
 );
 
 	// Instruction in normal order, not little endian
@@ -24,10 +24,6 @@ module DecompressionUnit(
 		C.JR
 		C.JALR
 	*/
-	reg [31:0] decomp_instr;
-	//wire or_gate1;
-
-	//assign or_gate = (|orig_instr[14:13]);
 
 	always@(*) begin
 		decomp_instr[31]  = 1'b0; //all starts with 0
