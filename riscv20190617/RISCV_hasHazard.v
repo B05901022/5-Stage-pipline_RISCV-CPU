@@ -24,6 +24,7 @@ module RISCV_Pipeline(
     input   rst_n;
     //----------I cache interface-------
     output          ICACHE_ren;
+    assign  ICACHE_ren = 1'b1;
 	output  [29:0]  ICACHE_addr;
 	input           ICACHE_stall;
 	input   [31:0]  ICACHE_rdata;

@@ -6,12 +6,9 @@ module RISCV_Pipeline(
     rst_n,
 //----------I cache interface-------
     ICACHE_ren      ,
-	ICACHE_wen      ,
 	ICACHE_addr     ,
-	ICACHE_wdata    ,
 	ICACHE_stall    ,
 	ICACHE_rdata    ,
-    ICACHE_pcadd    , //for RVC-Extension
 //----------D cache interface-------
 	DCACHE_ren      ,
 	DCACHE_wen      ,
@@ -27,12 +24,10 @@ module RISCV_Pipeline(
     input   rst_n;
     //----------I cache interface-------
     output          ICACHE_ren;
-    output	        ICACHE_wen;
-	output  [30:0]  ICACHE_addr;  //RVC
-	output  [31:0]  ICACHE_wdata;
+    assign  ICACHE_ren = 1'b1;
+	output  [29:0]  ICACHE_addr;
 	input           ICACHE_stall;
 	input   [31:0]  ICACHE_rdata;
-    input           ICACHE_pcadd; //RVC
     //----------D cache interface-------
     output          DCACHE_ren;
     output	        DCACHE_wen;
@@ -45,10 +40,8 @@ module RISCV_Pipeline(
     //---- IF/ID ------------------------
     wire [29:0]  IFID_pc_addr_w;
     wire [31:0]  IFID_inst_w; 
-    wire         IFID_add_4_2_w; //RVC
     reg  [29:0]  IFID_pc_addr_r;
     reg  [31:0]  IFID_inst_r; 
-    reg          IFID_add_4_2_r; //RVC
     //---- ID/EX ------------------------
     //WB regwrite, memToreg
     wire regwrite;
@@ -70,13 +63,11 @@ module RISCV_Pipeline(
     wire IDEX_branch_w;
     wire IDEX_MemRead_w;
     wire IDEX_MemWrite_w;
-    wire IDEX_add_4_2_w; //RVC
     reg  IDEX_jal_r;
     reg  IDEX_jalr_r; 
     reg  IDEX_branch_r;
     reg  IDEX_MemRead_r;
     reg  IDEX_MemWrite_r;
-    reg  IDEX_add_4_2_r; //RVC
     //EX aluop, alusrc
     wire [1:0]   aluop;
     wire         alusrc;
@@ -124,8 +115,8 @@ module RISCV_Pipeline(
     // pc addr
     wire [29:0]  EXMEM_jalr_addr_w;
     wire [29:0]  EXMEM_branch_or_jal_addr_w;
-    reg  [29:0]  EXMEM_jalr_addr_r;
-    reg  [29:0]  EXMEM_branch_or_jal_addr_r;
+    // reg  [29:0]  EXMEM_jalr_addr_r;
+    // reg  [29:0]  EXMEM_branch_or_jal_addr_r;
     // alu result
     wire [31:0]  EXMEM_alu_out_w;
     // wire         EXMEM_alu_zero_w;
@@ -166,10 +157,10 @@ module RISCV_Pipeline(
 
     //---- Hazard detection ----------
     wire         hazard_stall;
-    wire [1:0]   forward_a_ex; //mem stage
+    wire [1:0]   forward_a_ex; //ex stage
     wire [1:0]   forward_b_ex;
-    wire [1:0]   forward_a_id; //id stage
-    wire [1:0]   forward_b_id;
+    wire         forward_a_id; //id stage
+    wire         forward_b_id;
 
     // choose data from forwarding unit 
     wire  [31:0]    forwarding_x;
@@ -189,18 +180,15 @@ module RISCV_Pipeline(
     assign j_flush = ( IDEX_jal_r | IDEX_jalr_r );
 
     // decide next pc
-    wire [31:0] IF_state_add_4_or_2; //RVC
-    assign IF_state_add_4_or_2 = (ICACHE_pcadd) ? 4 : 2; //RVC
-    assign IFID_add_4_2_w = ICACHE_pcadd; //RVC
     assign pc_w_no_hazard = ( IDEX_jal_r | branch_flush ) ? EXMEM_branch_or_jal_addr_w:
             ( IDEX_jalr_r )        ? EXMEM_jalr_addr_w:
-            pc_r + IF_state_add_4_or_2; //RVC
+            pc_r + 4;
 
     assign pc_w = (hazard_stall)? pc_r: pc_w_no_hazard;
     // ID stage
     wire [31:0] wdata;
     assign wdata =  (MEMWB_jal_r|MEMWB_jalr_r) ? MEMWB_pc_add4_r :
-                    (MEMWB_MemToReg_r) ? {MEMWB_rdata_r[7:0], MEMWB_rdata_r[15:8], MEMWB_rdata_r[23:16], MEMWB_rdata_r[31:24]}:
+                    (MEMWB_MemToReg_r) ? MEMWB_rdata_r:
                     MEMWB_alu_out_r;
 
     wire [31:0] busX;
@@ -217,12 +205,11 @@ module RISCV_Pipeline(
         .busY       ( busY )
     );
 
-    assign IDEX_rdata1_w = (forward_a_id[0])? wdata          :
-                           (forward_a_id[1])? EXMEM_alu_out_r:
-                                              busX           ; 
-    assign IDEX_rdata2_w = (forward_b_id[0])? wdata          :
-                           (forward_b_id[1])? EXMEM_alu_out_r:
-                                              busY           ; 
+    // forwarding ( only forward WB stage )
+    assign IDEX_rdata1_w = (forward_a_id)? wdata          :
+                                           busX           ; 
+    assign IDEX_rdata2_w = (forward_b_id)? wdata          :
+                                           busY           ; 
     // check branch at EX stage
     EX_branch br(
         .branch(IDEX_branch_r),
@@ -259,7 +246,6 @@ module RISCV_Pipeline(
     assign IDEX_alusrc_w = ( j_flush | branch_flush | hazard_stall )? 1'b0: alusrc;
     assign IDEX_RegWrite_w = ( j_flush | branch_flush | hazard_stall )? 1'b0: regwrite;
     assign IDEX_aluop_w = ( j_flush | branch_flush | hazard_stall )? 2'b0: aluop;
-    assign IDEX_add_4_2_w = ( j_flush | branch_flush | hazard_stall )? 1'b0: IFID_add_4_2_r; //RVC
 
 
     assign IDEX_pc_addr_w = IFID_pc_addr_r;
@@ -280,23 +266,26 @@ module RISCV_Pipeline(
     assign EXMEM_MemRead_w  =  IDEX_MemRead_r;
     assign EXMEM_MemWrite_w =  IDEX_MemWrite_r;
 
-    assign EXMEM_jalr_addr_w = IDEX_imm_r + forwarding_x; //alu_in_x is forwarding data1, which is the address jalr will go
+    // assign EXMEM_jalr_addr_w = IDEX_imm_r + forwarding_x; //alu_in_x is forwarding data1, which is the address jalr will go
     assign EXMEM_branch_or_jal_addr_w = IDEX_imm_r + IDEX_pc_addr_r;
 
-    wire [31:0] EX_state_add_4_or_2; //RVC
-    assign EX_state_add_4_or_2 = (IDEX_add_4_2_r) ? 4 : 2; //RVC
+    assign EXMEM_jalr_addr_w = (forward_a_ex[1])? IDEX_imm_r + EXMEM_alu_out_r:
+                               (forward_a_ex[0])? IDEX_imm_r + wdata          :
+                                                  IDEX_imm_r + IDEX_rdata1_r  ;
+
+
     assign EXMEM_wdata_w    = {forwarding_y[7:0], forwarding_y[15:8], forwarding_y[23:16], forwarding_y[31:24] };
     assign EXMEM_rd_addr_w  = IDEX_rd_addr_r;
-    assign EXMEM_pc_add4_w  = IDEX_pc_addr_r + EX_state_add_4_or_2; //RVC
+    assign EXMEM_pc_add4_w  = IDEX_pc_addr_r + 4;
 
 
     wire  [31:0]    alu_in_y;
-    assign forwarding_x = (forward_a_ex[0])  ? wdata:
-                      (forward_a_ex[1])  ? EXMEM_alu_out_r:
-                                           IDEX_rdata1_r;
+    assign forwarding_x = (forward_a_ex[1])  ? EXMEM_alu_out_r:
+                          (forward_a_ex[0])  ? wdata          :
+                                               IDEX_rdata1_r;
     assign alu_in_y = (IDEX_alusrc_r) ? IDEX_imm_r: forwarding_y;
-    assign forwarding_y = (forward_b_ex[0])  ? wdata:
-                          (forward_b_ex[1])  ? EXMEM_alu_out_r:
+    assign forwarding_y = (forward_b_ex[1])  ? EXMEM_alu_out_r:
+                          (forward_b_ex[0])  ? wdata          :
                                                IDEX_rdata2_r;
                                                
     ALU alu(
@@ -323,20 +312,17 @@ module RISCV_Pipeline(
     assign  DCACHE_wen  = EXMEM_MemWrite_r;
     assign  DCACHE_addr = EXMEM_alu_out_r[31:2];
     assign  DCACHE_wdata = EXMEM_wdata_r;
-    assign  MEMWB_rdata_w = DCACHE_rdata;
+    assign  MEMWB_rdata_w = { DCACHE_rdata[7:0], DCACHE_rdata[15:8], DCACHE_rdata[23:16], DCACHE_rdata[31:24] };
     assign  MEMWB_rd_addr_w = EXMEM_rd_addr_r;
     assign  MEMWB_pc_add4_w = EXMEM_pc_add4_r;
     assign  MEMWB_jal_w = EXMEM_jal_r;
     assign  MEMWB_jalr_w = EXMEM_jalr_r;
 
-    assign  ICACHE_ren  = 1'b1;
-    assign  ICACHE_wen  = 1'b0;
-    assign  ICACHE_addr = pc_r[31:1]; //RVC
-    assign  ICACHE_wdata = 32'b0;
+    assign  ICACHE_addr = pc_r[31:2];
 
     assign  IFID_inst_w = (hazard_stall)?         IFID_inst_r  :
                           (branch_flush|j_flush)? 32'h0000007f : // flush control unit (bubble)
-                           ICACHE_rdata; //RVC //{ ICACHE_rdata[7:0], ICACHE_rdata[15:8], ICACHE_rdata[23:16], ICACHE_rdata[31:24] };
+    { ICACHE_rdata[7:0], ICACHE_rdata[15:8], ICACHE_rdata[23:16], ICACHE_rdata[31:24] };
   
     assign  IFID_pc_addr_w = pc_r;
 
@@ -400,8 +386,8 @@ module RISCV_Pipeline(
             EXMEM_branch_r              <= 0;
             EXMEM_MemRead_r             <= 0;
             EXMEM_MemWrite_r            <= 0;
-            EXMEM_jalr_addr_r           <= 0;
-            EXMEM_branch_or_jal_addr_r  <= 0;
+            // EXMEM_jalr_addr_r           <= 0;
+            // EXMEM_branch_or_jal_addr_r  <= 0;
             EXMEM_alu_out_r             <= 0;
             // EXMEM_alu_zero_r            <= 0;
             EXMEM_wdata_r               <= 0;
@@ -421,7 +407,6 @@ module RISCV_Pipeline(
 				pc_r					<= pc_r;
                 IFID_pc_addr_r          <= IFID_pc_addr_r;
                 IFID_inst_r             <= IFID_inst_r;
-                IFID_add_4_2_r          <= IFID_add_4_2_r; //RVC
                 IDEX_RegWrite_r         <= IDEX_RegWrite_r;
                 IDEX_MemToReg_r         <= IDEX_MemToReg_r;
                 IDEX_jal_r              <= IDEX_jal_r;
@@ -440,7 +425,6 @@ module RISCV_Pipeline(
                 IDEX_func7_r            <= IDEX_func7_r;
                 IDEX_func3_r            <= IDEX_func3_r;
                 IDEX_rd_addr_r          <= IDEX_rd_addr_r;
-                IDEX_add_4_2_r          <= IDEX_add_4_2_r; //RVC
                 EXMEM_RegWrite_r        <= EXMEM_RegWrite_r;
                 EXMEM_MemToReg_r        <= EXMEM_MemToReg_r;
                 EXMEM_jal_r             <= EXMEM_jal_r;
@@ -448,8 +432,8 @@ module RISCV_Pipeline(
                 EXMEM_branch_r          <= EXMEM_branch_r;
                 EXMEM_MemRead_r         <= EXMEM_MemRead_r;
                 EXMEM_MemWrite_r        <= EXMEM_MemWrite_r;
-                EXMEM_jalr_addr_r       <= EXMEM_jalr_addr_r;
-                EXMEM_branch_or_jal_addr_r <= EXMEM_branch_or_jal_addr_r;
+                // EXMEM_jalr_addr_r       <= EXMEM_jalr_addr_r;
+                // EXMEM_branch_or_jal_addr_r <= EXMEM_branch_or_jal_addr_r;
                 EXMEM_alu_out_r         <= EXMEM_alu_out_r;
                 // EXMEM_alu_zero_r        <= EXMEM_alu_zero_r;
                 EXMEM_wdata_r           <= EXMEM_wdata_r;
@@ -468,7 +452,6 @@ module RISCV_Pipeline(
 				pc_r					<= pc_w;
                 IFID_pc_addr_r          <= IFID_pc_addr_w;
                 IFID_inst_r             <= IFID_inst_w;
-                IFID_add_4_2_r          <= IFID_add_4_2_w; //RVC
                 IDEX_RegWrite_r         <= IDEX_RegWrite_w;
                 IDEX_MemToReg_r         <= IDEX_MemToReg_w;
                 IDEX_jal_r              <= IDEX_jal_w;
@@ -487,7 +470,6 @@ module RISCV_Pipeline(
                 IDEX_func7_r            <= IDEX_func7_w;
                 IDEX_func3_r            <= IDEX_func3_w;
                 IDEX_rd_addr_r          <= IDEX_rd_addr_w;
-                IDEX_add_4_2_r          <= IDEX_add_4_2_w; //RVC
                 EXMEM_RegWrite_r        <= EXMEM_RegWrite_w;
                 EXMEM_MemToReg_r        <= EXMEM_MemToReg_w;
                 EXMEM_jal_r             <= EXMEM_jal_w;
@@ -495,8 +477,8 @@ module RISCV_Pipeline(
                 EXMEM_branch_r          <= EXMEM_branch_w;
                 EXMEM_MemRead_r         <= EXMEM_MemRead_w;
                 EXMEM_MemWrite_r        <= EXMEM_MemWrite_w;
-                EXMEM_jalr_addr_r       <= EXMEM_jalr_addr_w;
-                EXMEM_branch_or_jal_addr_r  <= EXMEM_branch_or_jal_addr_w;
+                // EXMEM_jalr_addr_r       <= EXMEM_jalr_addr_w;
+                // EXMEM_branch_or_jal_addr_r  <= EXMEM_branch_or_jal_addr_w;
                 EXMEM_alu_out_r             <= EXMEM_alu_out_w;
                 // EXMEM_alu_zero_r            <= EXMEM_alu_zero_w;
                 EXMEM_wdata_r               <= EXMEM_wdata_w;
@@ -691,31 +673,23 @@ module ALU (
     // output         zero;    // input for branch control              
 
     reg [31:0] out;
-    // reg         zero;
-    wire [32:0] sub_result;
     wire [4:0] shamt; // shift amount unsigned 5-bit
 
-    // wire beq, bne;
-    assign sub_result = {x[31], x} + ~{y[31],y} + 1;
-    // assign beq = ~(|sub_result[31:0]); // $$$ check if error 
-    // assign bne = beq;
     assign shamt = y[4:0];
 
     always@(*) begin
     case ( ctrl )
-        4'b0000: begin out = x + y; end                   //ADD
-        4'b1000: begin out = sub_result; end              //SUB
-        4'b0010: begin                                              //SLT
-            out = (sub_result[32]) ? 32'd1 : 32'b0;
+        4'b0000: begin out = x + y; end                         //ADD
+        4'b1000: begin out = {x[31], x} + ~{y[31],y} + 1; end   //SUB
+        4'b0010: begin
+            out = ({x[31], x} + ~{y[31],y} + 1) >>31;           //SLT
         end                                                          
-        4'b0100: begin out = x ^ y; end                   //XOR
-        4'b0110: begin out = x | y; end                   //OR
-        4'b0111: begin out = x & y; end                   //AND
-        4'b0001: begin out = x << shamt; end              //SLL
-        4'b0101: begin out = x >> shamt; end              //SRL
-        4'b1101: begin out = $signed(x) >>> shamt; end    //SRA
-        4'b1011: begin out = 32'b0; end                 //BEQ
-        4'b0011: begin out = 32'b0; end                 //BNE
+        4'b0100: begin out = x ^ y; end                         //XOR
+        4'b0110: begin out = x | y; end                         //OR
+        4'b0111: begin out = x & y; end                         //AND
+        4'b0001: begin out = x << shamt; end                    //SLL
+        4'b0101: begin out = x >> shamt; end                    //SRL
+        4'b1101: begin out = $signed(x) >>> shamt; end          //SRA
         default: begin
             out = 32'b0;
         end 
@@ -776,14 +750,15 @@ module ALU_control(
             end
             2'b01: begin
                 //ALUop = 01, BEQ, BNE
-                if(Func3[0]) begin
-                    //BNE
-                    ALUCtrl = 4'b0011;
-                end
-                else begin
-                    //BEQ
-                    ALUCtrl = 4'b1011;
-                end
+                // if(Func3[0]) begin
+                //     //BNE
+                //     ALUCtrl = 4'b0011;
+                // end
+                // else begin
+                //     //BEQ
+                //     ALUCtrl = 4'b1011;
+                // end
+                ALUCtrl = 4'b0011;
             end
             2'b10: begin
                 ALUCtrl = {Func7, Func3[2:0]};
@@ -935,19 +910,9 @@ input [31:0] x, y;
 output jump; //if the condition is satisfy
 
 wire beq, bne;
-reg flag;
 
 assign bne = (|(x^y));
 assign beq = ~bne;
-assign jump = (~flag)? 1'b0:
-              (func3_0)? bne:
-              beq;
-
-always@(*) begin 
-    if(branch)
-        flag = 1'b1;
-    else 
-        flag = 1'b0;
-end
+assign jump = (func3_0)? bne && branch: beq && branch;
 
 endmodule

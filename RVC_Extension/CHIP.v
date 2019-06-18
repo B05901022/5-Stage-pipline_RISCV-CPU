@@ -3,7 +3,7 @@
 `include "./FORWARDING_UNIT.v"
 `include "./HAZARD_DETECTION_UNIT.v"
 `include "./cache_dm.v"
-`include "./cache_dm_ro.v"
+`include "./cache_ro.v"
 module CHIP (	clk,
 				rst_n,
 //----------for slow_memD------------
@@ -80,7 +80,7 @@ wire [31:0] DCACHE_rdata;
 		.ICACHE_addr    (ICACHE_addr)   ,
 		.ICACHE_stall   (ICACHE_stall)  ,
 		.ICACHE_rdata   (ICACHE_rdata)  ,
-		.ICACHE_pcadd   (mem_pcadd_I)   , //RVC
+		//.ICACHE_pcadd   (mem_pcadd_I)   , //RVC
 //----------D cache interface-------
 		.DCACHE_ren     (DCACHE_ren)    ,
 		.DCACHE_wen     (DCACHE_wen)    ,
@@ -108,7 +108,7 @@ wire [31:0] DCACHE_rdata;
         .mem_ready  (mem_ready_D)
 	);
 
-	cache_comp I_cache(
+	cache_read_only I_cache(
         .clk        (clk)         ,
         .proc_reset (~rst_n)      ,
         .proc_read  (ICACHE_ren)  ,
@@ -120,7 +120,7 @@ wire [31:0] DCACHE_rdata;
         .mem_addr   (mem_addr_I)  ,
 		.mem_wdata	(mem_wdata_I) ,
         .mem_rdata  (mem_rdata_I) ,
-        .mem_ready  (mem_ready_I) ,
-        .pcadd      (mem_pcadd_I) //RVC
+        .mem_ready  (mem_ready_I) 
+        //.pcadd      (mem_pcadd_I) //RVC
 	);
 endmodule
