@@ -131,7 +131,7 @@ assign curr_32_16  = (&word_r[proc_addr[5:0]][9:8]);
 assign curr_h_o_m  = ( valid_r[proc_addr[5:3]] && (tag_r[proc_addr[5:3]] == proc_addr[30:6]) );
 assign next_h_o_m  = ( valid_r[next_addr[5:3]] && (tag_r[next_addr[5:3]] == next_addr[30:6]) );
 assign hit_or_miss = (curr_32_16) ? (curr_h_o_m && next_h_o_m) : (curr_h_o_m);
-assign cross_tag_error = ( curr_32_16 && (~curr_h_o_m) );
+assign cross_tag_error = ( curr_32_16 && ( curr_h_o_m && (~next_h_o_m) ) );
 
 wire [15:0] orig_instr;
 wire [31:0] decomp_instr;
