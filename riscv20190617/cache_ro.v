@@ -85,12 +85,17 @@ always@(*) begin
     case ( state )
         START:
             begin 
-                if( hit_or_miss ) begin
-                    // hit!!
-                    state_nxt = START;
+                if ((proc_read|proc_write)) begin
+                    if( hit_or_miss  ) begin
+                        // hit!!
+                        state_nxt = START;
+                    end
+                    else begin
+                        state_nxt = ALLOCATE;
+                    end
                 end
                 else begin
-                    state_nxt = ALLOCATE;
+                    state_nxt = state;
                 end
             end
         ALLOCATE:
@@ -128,7 +133,7 @@ always@(*) begin
     mem_read =      0;
     mem_write =     0;
     mem_addr   = proc_addr[29:2];
-    wdata_buf_w = wdata_buf_r;
+    wdata_buf_w = mem_rdata;
     //mem_addr_buf_w = mem_addr_buf_r;
     for (i=0;i<8;i=i+1) begin
         valid_w[i] = valid_r[i]; 
@@ -145,12 +150,12 @@ always@(*) begin
                 if( hit_or_miss) begin
                     // hit
                     stall = 1'b0;
-                    $displayb("Current instruction: ",{proc_rdata[7:0], proc_rdata[15:8], proc_rdata[23:16], proc_rdata[31:24]});
+                    
                 end
                 else begin
                     // miss
-                    stall = 1'b1;
-                    
+                    stall = 1'b1;       
+                                 
                 end
             end
         ALLOCATE:
@@ -168,15 +173,8 @@ always@(*) begin
                 endcase
                 valid_w[proc_addr[4:2]] = 1'b1;
                 
-                if ( mem_ready ) begin
-                    //tag_w[proc_addr[4:2]] = proc_addr[29:5];
-                    wdata_buf_w = mem_rdata;
-                end
-                else begin
-                    mem_addr = proc_addr[29:2];
                     mem_read =  1'b1;
                     mem_write = 1'b0;
-                end
             end
         BUFFER:
             begin
@@ -186,7 +184,7 @@ always@(*) begin
             end
         default:
             begin
-                stall = 1'b0;
+                stall = 1'b1;
                 mem_read = 1'b0;
                 mem_write = 1'b0;
             end
