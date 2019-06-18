@@ -3,7 +3,7 @@
 `include "./FORWARDING_UNIT.v"
 `include "./HAZARD_DETECTION_UNIT.v"
 `include "./cache_dm.v"
-`include "./cache_dm_ro.v"
+`include "./cache_ro.v"
 module CHIP (	clk,
 				rst_n,
 //----------for slow_memD------------

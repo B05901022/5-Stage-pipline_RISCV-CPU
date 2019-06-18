@@ -50,7 +50,7 @@ output			DCACHE_wen;
 // wire declaration
 wire        ICACHE_ren;
 wire        ICACHE_wen;
-wire [30:0] ICACHE_addr;
+wire [30:0] ICACHE_addr; //RVC
 wire [31:0] ICACHE_wdata;
 wire        ICACHE_stall;
 wire [31:0] ICACHE_rdata;

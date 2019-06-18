@@ -91,10 +91,10 @@ module	TestBed(
 								nxtaddr = curaddr + 1;
 								$display("\nyour answer:%d  correct answer: %d\n", data_modify, answer);
 								if( data_modify != answer ) begin
-									$display("Wrong!");
+									//$display("Wrong!");
 									nxt_error_num = error_num + 8'd1;
 								end else begin 
-									$display("\t\tRight!");
+									//$display("\t\tRight!");
 								end
 							end
 							nxtstate = curstate;

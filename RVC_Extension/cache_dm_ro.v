@@ -667,7 +667,7 @@ module cache_comp(
     input   [30:0] proc_addr; //RVC
     input   [31:0] proc_wdata;
     output         proc_stall;
-    output  reg [31:0] proc_rdata;
+    output   [31:0] proc_rdata;
     output  reg    pcadd; //RVC
     // memory interface
     input  [127:0] mem_rdata;
@@ -692,7 +692,7 @@ module cache_comp(
     reg  [1:0]  state;
 
     // hit or miss
-    reg      hit_or_miss; // 1 for hit, 0 for miss
+    wire     hit_or_miss; // 1 for hit, 0 for miss
     wire     proc_h_o_m;
     wire     next_h_o_m;
 
@@ -757,12 +757,15 @@ end
 //==== combinational circuit ==============================
 
 //assign proc_rdata = word_r[proc_addr[4:0]];
+assign proc_rdata = {word_r[next_addr[5:0]][7:0], word_r[next_addr[5:0]][15:8],
+                     word_r[proc_addr[5:0]][7:0], word_r[proc_addr[5:0]][15:8]};
 assign mem_wdata  = 128'b0;
 assign mem_write  = 1'b0;
 assign next_addr  = proc_addr + 31'd1;
 assign proc_stall = stall;
 assign proc_h_o_m = ( valid_r[proc_addr[5:3]] && ( tag_r[proc_addr[5:3]] == next_addr[30:6] ) );
 assign next_h_o_m = ( valid_r[next_addr[5:3]] && ( tag_r[next_addr[5:3]] == next_addr[30:6] ) );
+assign hit_or_miss= ( proc_h_o_m && ( ~( (&word_r[proc_addr[5:0]][9:8]) && ( (&proc_addr[2:0]) && (~next_h_o_m) ) ) ) );
 DecompressionUnit DU1(.decomp_instr(decomp_instr), .orig_instr  (orig_instr));
 
 always@(*) begin
@@ -771,7 +774,6 @@ always@(*) begin
     mem_read    = 1'b0;
     mem_addr    = proc_addr[30:3];
     wdata_buf_w = wdata_buf_r;
-    hit_or_miss = 1'b0;
     cross_tag_error_w = cross_tag_error_r;
     pcadd       = 1'b1;
     orig_instr  = 16'd1;
@@ -792,29 +794,33 @@ always@(*) begin
                     	if ( (&proc_addr[2:0]) && (~next_h_o_m) ) begin
                     		//cross block and tag wrong -> miss
                     		stall = 1'b1;
-                    		hit_or_miss = 1'b0;
+                    		//hit_or_miss = 1'b0;
                     		cross_tag_error_w = 1'b1;
                     	end else begin
                     		//32-bit instruction hit
+                    		$displayb("Current instruction: ", proc_rdata);
                     		stall = 1'b0;
-                    		hit_or_miss = 1'b1;
-                    		proc_rdata = {word_r[next_addr[5:0]][7:0], word_r[next_addr[5:0]][15:8],
-                    					  word_r[proc_addr[5:0]][7:0], word_r[proc_addr[5:0]][15:8]};
+                    		//hit_or_miss = 1'b1;
+                    		//proc_rdata = {word_r[next_addr[5:0]][7:0], word_r[next_addr[5:0]][15:8],
+                    		//			  word_r[proc_addr[5:0]][7:0], word_r[proc_addr[5:0]][15:8]};
                     		pcadd = 1'b1;
+                    		cross_tag_error_w = 1'b0;
                     	end
                     end else begin
                     	//16-bit instruction hit
                     	stall = 1'b0;
                     	orig_instr = {word_r[proc_addr[5:0]][7:0], word_r[proc_addr[5:0]][15:8]};
-                    	proc_rdata = decomp_instr;
-                    	hit_or_miss = 1'b1;
+                    	//proc_rdata = decomp_instr;
+                    	//hit_or_miss = 1'b1;
                     	pcadd = 1'b0;
+                    	cross_tag_error_w = 1'b0;
                     end                    
                 end
                 else begin
                     // miss
                     stall = 1'b1;
-                    hit_or_miss = 1'b0;
+                    //hit_or_miss = 1'b0;
+                    cross_tag_error_w = 1'b0;
                 end
             end
         ALLOCATE:
@@ -857,10 +863,17 @@ always@(*) begin
         BUFFER:
             begin
                 stall = 1'b1;
-                {{word_w[{proc_addr[5:3], 3'b110}]}, {word_w[{proc_addr[5:3], 3'b111}]},
-                 {word_w[{proc_addr[5:3], 3'b100}]}, {word_w[{proc_addr[5:3], 3'b101}]},
-                 {word_w[{proc_addr[5:3], 3'b010}]}, {word_w[{proc_addr[5:3], 3'b011}]},
-                 {word_w[{proc_addr[5:3], 3'b000}]}, {word_w[{proc_addr[5:3], 3'b001}]}} = wdata_buf_r;
+                if (cross_tag_error_r) begin
+                	{{word_w[{next_addr[5:3], 3'b110}]}, {word_w[{next_addr[5:3], 3'b111}]},
+                 	 {word_w[{next_addr[5:3], 3'b100}]}, {word_w[{next_addr[5:3], 3'b101}]},
+                 	 {word_w[{next_addr[5:3], 3'b010}]}, {word_w[{next_addr[5:3], 3'b011}]},
+                 	 {word_w[{next_addr[5:3], 3'b000}]}, {word_w[{next_addr[5:3], 3'b001}]}} = wdata_buf_r;
+                end else begin
+                	{{word_w[{proc_addr[5:3], 3'b110}]}, {word_w[{proc_addr[5:3], 3'b111}]},
+                 	 {word_w[{proc_addr[5:3], 3'b100}]}, {word_w[{proc_addr[5:3], 3'b101}]},
+                 	 {word_w[{proc_addr[5:3], 3'b010}]}, {word_w[{proc_addr[5:3], 3'b011}]},
+                 	 {word_w[{proc_addr[5:3], 3'b000}]}, {word_w[{proc_addr[5:3], 3'b001}]}} = wdata_buf_r;
+                end
             end
         default:
             begin

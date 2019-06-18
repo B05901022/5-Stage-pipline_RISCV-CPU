@@ -145,7 +145,7 @@ always@(*) begin
                 if( hit_or_miss) begin
                     // hit
                     stall = 1'b0;
-                    
+                    $displayb("Current instruction: ",{proc_rdata[7:0], proc_rdata[15:8], proc_rdata[23:16], proc_rdata[31:24]});
                 end
                 else begin
                     // miss
