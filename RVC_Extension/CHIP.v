@@ -80,7 +80,7 @@ wire [31:0] DCACHE_rdata;
 		.ICACHE_addr    (ICACHE_addr)   ,
 		.ICACHE_stall   (ICACHE_stall)  ,
 		.ICACHE_rdata   (ICACHE_rdata)  ,
-		.ICACHE_pcadd   (mem_pcadd_I)   , //RVC
+		.ICACHE_pcadd   (ICACHE_pcadd)  , //RVC
 //----------D cache interface-------
 		.DCACHE_ren     (DCACHE_ren)    ,
 		.DCACHE_wen     (DCACHE_wen)    ,
@@ -121,6 +121,6 @@ wire [31:0] DCACHE_rdata;
 		.mem_wdata	(mem_wdata_I) ,
         .mem_rdata  (mem_rdata_I) ,
         .mem_ready  (mem_ready_I) ,
-        .proc_pcadd (mem_pcadd_I) //RVC
+        .proc_pcadd (ICACHE_pcadd) //RVC
 	);
 endmodule

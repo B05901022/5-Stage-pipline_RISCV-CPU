@@ -61,9 +61,7 @@ module cache_read_only(
     wire     hit_or_miss; // 1 for hit, 0 for miss
 
     // for circuit output
-    reg [31:0]  rdata;
     reg         stall;
-    reg [127:0] wdata;
 
     // for buffer state
     reg  [127:0]  wdata_buf_w;
@@ -126,12 +124,13 @@ assign next_addr  = proc_addr + 31'd1;
 
 wire curr_32_16;
 wire curr_h_o_m, next_h_o_m;
-wire cross_tag_error;
+//wire cross_tag_error;
+reg cross_tag_error_r, cross_tag_error_w;
 assign curr_32_16  = (&word_r[proc_addr[5:0]][9:8]);
 assign curr_h_o_m  = ( valid_r[proc_addr[5:3]] && (tag_r[proc_addr[5:3]] == proc_addr[30:6]) );
 assign next_h_o_m  = ( valid_r[next_addr[5:3]] && (tag_r[next_addr[5:3]] == next_addr[30:6]) );
 assign hit_or_miss = (curr_32_16) ? (curr_h_o_m && next_h_o_m) : (curr_h_o_m);
-assign cross_tag_error = ( curr_32_16 && ( curr_h_o_m && (~next_h_o_m) ) );
+//assign cross_tag_error = ( curr_32_16 && ( curr_h_o_m && (~next_h_o_m) ) );
 
 wire [15:0] orig_instr;
 wire [31:0] decomp_instr;
@@ -149,7 +148,7 @@ always@(*) begin
                               :   little_endian_decomp_instr; 
     stall =         1'b0;
     mem_read =      1'b0;
-    mem_addr   = (cross_tag_error) ? next_addr[30:3] : proc_addr[30:3];
+    mem_addr   = (cross_tag_error_r) ? next_addr[30:3] : proc_addr[30:3];//{25'b0, next_addr[5:3]} : {25'b0, proc_addr[5:3]};
     wdata_buf_w = mem_rdata;
     for (i=0;i<8;i=i+1) begin
         valid_w[i] = valid_r[i]; 
@@ -158,6 +157,7 @@ always@(*) begin
     for (i=0;i<64;i=i+1) begin
         word_w[i]  = word_r[i]; 
     end
+    cross_tag_error_w = cross_tag_error_r;
     //===========================
     case ( state ) 
         START:
@@ -171,7 +171,8 @@ always@(*) begin
                     else begin
                         // miss
                         stall = 1'b1;
-                        mem_read = 1'b1;                 
+                        mem_read = 1'b1;
+                        cross_tag_error_w = ( curr_32_16 && ( curr_h_o_m && (~next_h_o_m) ) );                
                     end
                 end
                 else stall = 1'b0;
@@ -180,7 +181,7 @@ always@(*) begin
             begin
                 stall = 1'b1;
                 mem_read =  1'b1;
-                if ( cross_tag_error ) begin
+                if ( cross_tag_error_r ) begin
                     //32-bit cross tag miss
                     case ( next_addr[5:3] ) 
                         3'd0: tag_w[0] = next_addr[30:6];
@@ -211,11 +212,12 @@ always@(*) begin
         BUFFER:
             begin
                 stall = 1'b1;
-                if (cross_tag_error) begin
+                if (cross_tag_error_r) begin
                     {{word_w[{next_addr[5:3], 3'b110}]}, {word_w[{next_addr[5:3], 3'b111}]},
                      {word_w[{next_addr[5:3], 3'b100}]}, {word_w[{next_addr[5:3], 3'b101}]},
                      {word_w[{next_addr[5:3], 3'b010}]}, {word_w[{next_addr[5:3], 3'b011}]},
                      {word_w[{next_addr[5:3], 3'b000}]}, {word_w[{next_addr[5:3], 3'b001}]}} = wdata_buf_r;
+                     cross_tag_error_w = 1'b0;
                 end else begin
                     {{word_w[{proc_addr[5:3], 3'b110}]}, {word_w[{proc_addr[5:3], 3'b111}]},
                      {word_w[{proc_addr[5:3], 3'b100}]}, {word_w[{proc_addr[5:3], 3'b101}]},
@@ -241,6 +243,7 @@ always@( posedge clk or posedge proc_reset) begin
             word_r[i]  <= 16'b0; // reset words
         end
         wdata_buf_r <= 0;
+        cross_tag_error_r <= 1'b0;
     end
     else begin
         for (i=0;i<8;i=i+1) begin
@@ -251,6 +254,7 @@ always@( posedge clk or posedge proc_reset) begin
             word_r[i]  <= word_w[i]; // reset words
         end
         wdata_buf_r <= wdata_buf_w;
+        cross_tag_error_r <= cross_tag_error_w;
     end
 end
 
