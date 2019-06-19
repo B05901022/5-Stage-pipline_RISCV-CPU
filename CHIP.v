@@ -1,9 +1,9 @@
 // Top module of your design, you cannot modify this module!!
-`include "cache_dm.v"
-`include "RISCV_hasHazard.v"
-`include "HAZARD_DETECTION_UNIT.v"
-`include "FORWARDING_UNIT.v"
-`include "cache_dm_ro.v" //
+`include "./RISCV_hasHazard.v"
+`include "./FORWARDING_UNIT.v"
+`include "./HAZARD_DETECTION_UNIT.v"
+`include "./cache_dm.v"
+`include "./cache_ro.v"
 
 module CHIP (	clk,
 				rst_n,
@@ -16,9 +16,9 @@ module CHIP (	clk,
 				mem_ready_D,
 //----------for slow_memI------------
 				mem_read_I,
-				//mem_write_I,
+				mem_write_I,
 				mem_addr_I,
-				//mem_wdata_I,
+				mem_wdata_I,
 				mem_rdata_I,
 				mem_ready_I,
 //----------for TestBed--------------				
@@ -37,9 +37,9 @@ input	[127:0]	mem_rdata_D;
 input			mem_ready_D;
 //--------------------------
 output			mem_read_I;
-//output			mem_write_I;
+output			mem_write_I;
 output	[31:4]	mem_addr_I;
-//output	[127:0]	mem_wdata_I;
+output	[127:0]	mem_wdata_I;
 input	[127:0]	mem_rdata_I;
 input			mem_ready_I;
 //----------for TestBed--------------
@@ -50,11 +50,12 @@ output			DCACHE_wen;
 
 // wire declaration
 wire        ICACHE_ren;
-//wire        ICACHE_wen;
-wire [29:0] ICACHE_addr;
-//wire [31:0] ICACHE_wdata;
+wire        ICACHE_wen;
+wire [29:0] ICACHE_addr; //RVC
+wire [31:0] ICACHE_wdata;
 wire        ICACHE_stall;
 wire [31:0] ICACHE_rdata;
+//wire        ICACHE_pcadd; //RVC
 
 wire        DCACHE_ren;
 wire        DCACHE_wen;
@@ -77,11 +78,10 @@ wire [31:0] DCACHE_rdata;
 		.rst_n          (rst_n)         ,
 //----------I cache interface-------		
 		.ICACHE_ren     (ICACHE_ren)    ,
-		.ICACHE_wen     (ICACHE_wen)    ,
 		.ICACHE_addr    (ICACHE_addr)   ,
-		.ICACHE_wdata   (ICACHE_wdata)  ,
 		.ICACHE_stall   (ICACHE_stall)  ,
 		.ICACHE_rdata   (ICACHE_rdata)  ,
+		//.ICACHE_pcadd   (ICACHE_pcadd)  , //RVC
 //----------D cache interface-------
 		.DCACHE_ren     (DCACHE_ren)    ,
 		.DCACHE_wen     (DCACHE_wen)    ,
@@ -109,20 +109,19 @@ wire [31:0] DCACHE_rdata;
         .mem_ready  (mem_ready_D)
 	);
 
-	cache I_cache( //
+	cache_read_only I_cache(
         .clk        (clk)         ,
         .proc_reset (~rst_n)      ,
-        //.proc_read  (ICACHE_ren)  ,
-        //.proc_write (ICACHE_wen)  ,
+        .proc_read  (ICACHE_ren)  ,
         .proc_addr  (ICACHE_addr) ,
         .proc_rdata (ICACHE_rdata),
-        //.proc_wdata (ICACHE_wdata),
         .proc_stall (ICACHE_stall),
         .mem_read   (mem_read_I)  ,
-        //.mem_write  (mem_write_I) ,
+		.mem_write	(mem_write_I) ,
         .mem_addr   (mem_addr_I)  ,
-        //.mem_wdata  (mem_wdata_I) ,
+		.mem_wdata	(mem_wdata_I) ,
         .mem_rdata  (mem_rdata_I) ,
-        .mem_ready  (mem_ready_I)
+        .mem_ready  (mem_ready_I) 
+        //.proc_pcadd (ICACHE_pcadd) //RVC
 	);
 endmodule

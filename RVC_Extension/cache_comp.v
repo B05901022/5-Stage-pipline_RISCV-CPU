@@ -81,17 +81,11 @@ always@(*) begin
     case ( state )
         START:
             begin 
-                if ((proc_read)) begin
-                    if( hit_or_miss  ) begin
-                        // hit!!
-                        state_nxt = START;
-                    end
-                    else begin
-                        state_nxt = ALLOCATE;
-                    end
-                end
-                else begin
-                    state_nxt = state;
+                if( hit_or_miss  ) begin
+                    // hit!!
+                    state_nxt = START;
+                end else begin
+                    state_nxt = ALLOCATE;
                 end
             end
         ALLOCATE:
@@ -164,20 +158,17 @@ always@(*) begin
     case ( state ) 
         START:
             begin
-                if((proc_read)) begin
-                    if( hit_or_miss) begin
-                        // hit
-                        stall = 1'b0;
-                        
-                    end
-                    else begin
-                        // miss
-                        stall = 1'b1;
-                        mem_read = 1'b1;
-                        cross_tag_error_w = ( curr_32_16 && ( curr_h_o_m && (~next_h_o_m) ) );                
-                    end
+                if( hit_or_miss) begin
+                    // hit
+                    stall = 1'b0;
+                    
                 end
-                else stall = 1'b0;
+                else begin
+                    // miss
+                    stall = 1'b1;
+                    mem_read = 1'b1;
+                    cross_tag_error_w = ( curr_32_16 && ( curr_h_o_m && (~next_h_o_m) ) );                
+                end
             end
         ALLOCATE:
             begin

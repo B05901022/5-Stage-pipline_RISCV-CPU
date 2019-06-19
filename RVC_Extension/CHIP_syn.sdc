@@ -1,9 +1,9 @@
 #You may modified the clock constraints 
 #or add more constraints for your design
 ####################################################
-read_verilog CHIP.v
-current_design CHIP.v
-set cycle  5        
+#read_verilog CHIP.v
+#current_design CHIP.v
+set cycle  3        
 ####################################################
 
 

@@ -38,6 +38,13 @@ module	TestBed(
 	reg				state,state_next;
 
 	wire    [31:0]  data_modify;
+
+	reg [31:0] counter;
+
+	always@( posedge clk or negedge rst ) begin
+		if (~rst) counter = 0;
+		else counter = counter + 1;
+	end
 		
 	parameter	state_idle 	= 2'b00;
 	parameter	state_check = 2'b01;
@@ -119,6 +126,7 @@ module	TestBed(
 				$display("============================================================================");
 				$display("\n \\(^o^)/ CONGRATULATIONS!!  The simulation result is PASS!!!\n");
 				$display("============================================================================");
+				$display("Total Cycle: %d", counter);
 			end
 		end
 	end

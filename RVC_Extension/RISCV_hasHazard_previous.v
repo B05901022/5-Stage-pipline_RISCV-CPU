@@ -25,7 +25,7 @@ module RISCV_Pipeline(
     input   rst_n;
     //----------I cache interface-------
     output          ICACHE_ren;
-    assign ICACHE_ren = 1'b1;
+    assign  ICACHE_ren = 1'b1;
 	output  [30:0]  ICACHE_addr;
 	input           ICACHE_stall;
 	input   [31:0]  ICACHE_rdata;
@@ -40,9 +40,9 @@ module RISCV_Pipeline(
 
 //==== Pipeline Register Definition =====
     //---- IF/ID ------------------------
-    wire [31:0]  IFID_pc_addr_w;
+    wire [29:0]  IFID_pc_addr_w;
     wire [31:0]  IFID_inst_w; 
-    reg  [31:0]  IFID_pc_addr_r;
+    reg  [29:0]  IFID_pc_addr_r;
     reg  [31:0]  IFID_inst_r; 
     reg          IFID_pcadd_r;
     wire         IFID_pcadd_w;
@@ -51,6 +51,7 @@ module RISCV_Pipeline(
     wire regwrite;
     wire memtoreg;
     wire IDEX_RegWrite_w;
+
     wire IDEX_MemToReg_w;
     reg  IDEX_RegWrite_r;
     reg  IDEX_MemToReg_r;
@@ -61,18 +62,16 @@ module RISCV_Pipeline(
     wire memread;
     wire memwrite;
 
-    //wire IDEX_jal_w;
-    //wire IDEX_jalr_w; 
-    //wire IDEX_branch_w;
+    wire IDEX_jal_w;
+    wire IDEX_jalr_w; 
+    wire IDEX_branch_w;
     wire IDEX_MemRead_w;
     wire IDEX_MemWrite_w;
-    wire IDEX_jump_w;
-    //reg  IDEX_jal_r;
-    //reg  IDEX_jalr_r; 
-    //reg  IDEX_branch_r;
+    reg  IDEX_jal_r;
+    reg  IDEX_jalr_r; 
+    reg  IDEX_branch_r;
     reg  IDEX_MemRead_r;
     reg  IDEX_MemWrite_r;
-    reg  IDEX_jump_r;
     //EX aluop, alusrc
     wire [1:0]   aluop;
     wire         alusrc;
@@ -82,12 +81,12 @@ module RISCV_Pipeline(
     reg  [4:0]   IDEX_rs2_r;
     wire [4:0]   IDEX_rs1_w;
     wire [4:0]   IDEX_rs2_w;
-    wire [31:0]  IDEX_pc_addr_w;
+    wire [29:0]  IDEX_pc_addr_w;
     wire [31:0]  IDEX_rdata1_w;
     wire [31:0]  IDEX_rdata2_w;
     reg  [1:0]   IDEX_aluop_r;
     reg          IDEX_alusrc_r;
-    reg  [31:0]  IDEX_pc_addr_r;
+    reg  [29:0]  IDEX_pc_addr_r;
     reg  [31:0]  IDEX_rdata1_r;
     reg  [31:0]  IDEX_rdata2_r;
     // other data
@@ -100,7 +99,7 @@ module RISCV_Pipeline(
     reg  [2:0]   IDEX_func3_r;
     reg  [4:0]   IDEX_rd_addr_r;
     reg          IDEX_pcadd_r;
-    wire         IDEX_pcadd_w; 
+    wire         IDEX_pcadd_w;  
 
     //---- EX/MEM -----------------------
     //WB regwrite, memToreg
@@ -109,21 +108,19 @@ module RISCV_Pipeline(
     reg  EXMEM_RegWrite_r;
     reg  EXMEM_MemToReg_r;
     //M  jal, jalr, branch, memread, memwrite
-    //wire EXMEM_jal_w;
-    //wire EXMEM_jalr_w; 
-    //wire EXMEM_branch_w;
-    wire EXMEM_jump_w;
+    wire EXMEM_jal_w;
+    wire EXMEM_jalr_w; 
+    wire EXMEM_branch_w;
     wire EXMEM_MemRead_w;
     wire EXMEM_MemWrite_w;
-    //reg  EXMEM_jal_r;
-    //reg  EXMEM_jalr_r; 
-    //reg  EXMEM_branch_r;
+    reg  EXMEM_jal_r;
+    reg  EXMEM_jalr_r; 
+    reg  EXMEM_branch_r;
     reg  EXMEM_MemRead_r;
     reg  EXMEM_MemWrite_r;
-    reg  EXMEM_jump_r;
     // pc addr
-    //wire [29:0]  EXMEM_jalr_addr_w;
-    //wire [29:0]  EXMEM_branch_or_jal_addr_w;
+    wire [29:0]  EXMEM_jalr_addr_w;
+    wire [29:0]  EXMEM_branch_or_jal_addr_w;
     // reg  [29:0]  EXMEM_jalr_addr_r;
     // reg  [29:0]  EXMEM_branch_or_jal_addr_r;
     // alu result
@@ -159,10 +156,10 @@ module RISCV_Pipeline(
     // for jal, jalr
     wire [31:0]  MEMWB_pc_add4_w;
     reg  [31:0]  MEMWB_pc_add4_r;
-    //wire         MEMWB_jal_w;
-    //reg          MEMWB_jal_r;
-    //wire         MEMWB_jalr_w;
-    //reg          MEMWB_jalr_r;
+    wire         MEMWB_jal_w;
+    reg          MEMWB_jal_r;
+    wire         MEMWB_jalr_w;
+    reg          MEMWB_jalr_r;
 
     //---- Hazard detection ----------
     wire         hazard_stall;
@@ -175,86 +172,34 @@ module RISCV_Pipeline(
     wire  [31:0]    forwarding_x;
     wire  [31:0]    forwarding_y; 
 
-//==== BRANCH/JUMP in ID stage =============================
-    // its new !!
-    wire [31:0] busX;
-    wire [31:0] wdata;
-    wire [31:0] ID_jal_or_branch_addr;
-    wire [31:0] ID_jalr_addr[0:2];
-    wire [31:0] ID_real_jalr_addr;
-
-    wire ID_beq;
-    wire ID_branch_jump;
-    //wire ID_jump;
-
-    assign ID_real_jalr_addr = (forward_a_id[1]) ?  ID_jalr_addr[1] :
-                               (forward_a_id[0]) ?  ID_jalr_addr[2] :
-                                                    ID_jalr_addr[0] ; 
-
-    assign ID_beq = (IDEX_rdata1_w == IDEX_rdata2_w);
-    assign ID_branch_jump = ((ID_beq ^ IFID_inst_r[12]) && IFID_inst_r[6] && (~IFID_inst_r[2]));
-    assign IDEX_jump_w = (jal|jalr);
-
-    ID_jump id_jump(
-        .pc                  ( IFID_pc_addr_r),
-        .offset              ( IDEX_imm_w ),
-        .rdata1              ( busX ),
-        .forward_data1       ( EXMEM_alu_out_r ),
-        .forward_data2       ( wdata),
-        .jal_or_branch_addr  (ID_jal_or_branch_addr),
-        .jalr_addr1          (ID_jalr_addr[0]),
-        .jalr_addr2          (ID_jalr_addr[1]),
-        .jalr_addr3          (ID_jalr_addr[2])
-    );
-
-    wire bubble;
-    EX_to_ID_bubble bubble_unit(
-        .IDEX_rd_addr    ( IDEX_rd_addr_r),
-        .IFID_rs1        (IFID_inst_r[19:15]),
-        .IFID_rs2        (IFID_inst_r[24:20]),
-        .IDEX_regWrite   (IDEX_RegWrite_r),
-        .ID_branch_or_jalr( jalr|branch),
-        .Bubble          ( bubble)
-    );
-//========================================================================================
 
 //==== PC =============================
-    //TODO
-
-    //wire [31:0] pc_w_no_hazard;
+    wire [31:0] pc_w_no_hazard;
     wire [31:0] pc_w;
-    wire [31:0] pc_add4;
     reg  [31:0] pc_r;
 
 
 //==== Connect the Circuit ============
     // PC
-    wire [31:0] IF_stage_pcadd_4_2;
-    assign IF_stage_pcadd_4_2 = (ICACHE_pcadd) ? 4 : 2;
-    assign pc_add4 = pc_r + IF_stage_pcadd_4_2 ;
-    assign pc_w =   (hazard_stall|bubble) ? pc_r :
-                    (jal|ID_branch_jump) ? ID_jal_or_branch_addr :
-                    (jalr) ? ID_real_jalr_addr :
-                    pc_add4;
-
-    //wire    branch_flush; //judge if branch, if so, flush the following instrction
-    //wire    j_flush;
-    //assign j_flush = ( IDEX_jal_r | IDEX_jalr_r );
+    wire    branch_flush; //judge if branch, if so, flush the following instrction
+    wire    j_flush;
+    assign j_flush = ( IDEX_jal_r | IDEX_jalr_r );
 
     // decide next pc
-    //assign pc_w_no_hazard = ( IDEX_jal_r | branch_flush ) ? EXMEM_branch_or_jal_addr_w:
-    //        ( IDEX_jalr_r )        ? EXMEM_jalr_addr_w:
-    //        pc_r + 4;
+    wire [31:0] IF_stage_add_4_or_2;
+    assign IF_stage_add_4_or_2 = (ICACHE_pcadd) ? 4 : 2;
+    assign pc_w_no_hazard = ( IDEX_jal_r | branch_flush ) ? EXMEM_branch_or_jal_addr_w:
+            ( IDEX_jalr_r )        ? EXMEM_jalr_addr_w:
+            pc_r + IF_stage_add_4_or_2;
 
-    //assign pc_w = (hazard_stall)? pc_r: pc_w_no_hazard;
+    assign pc_w = (hazard_stall)? pc_r: pc_w_no_hazard;
     // ID stage
-    
-    
-    //TODO...
-    assign wdata =  (MEMWB_MemToReg_r) ? MEMWB_rdata_r:
+    wire [31:0] wdata;
+    assign wdata =  (MEMWB_jal_r|MEMWB_jalr_r) ? MEMWB_pc_add4_r :
+                    (MEMWB_MemToReg_r) ? MEMWB_rdata_r:
                     MEMWB_alu_out_r;
 
-    
+    wire [31:0] busX;
     wire [31:0] busY;
     register_file reg_file(
         .clk        ( clk )                 ,
@@ -269,14 +214,18 @@ module RISCV_Pipeline(
     );
 
     // forwarding ( only forward WB stage )
-    assign IDEX_rdata1_w = (forward_a_id[1]) ? EXMEM_alu_out_r  :
-                           (forward_a_id[0]) ? wdata            :
-                                               busX             ; 
-    assign IDEX_rdata2_w =  (forward_b_id[1])? EXMEM_alu_out_r  :
-                            (forward_b_id[0])? wdata            :
-                                               busY             ; 
+    assign IDEX_rdata1_w = (forward_a_id[0])? wdata          :
+                                           busX           ; 
+    assign IDEX_rdata2_w = (forward_b_id[0])? wdata          :
+                                           busY           ; 
     // check branch at EX stage
-    
+    EX_branch br(
+        .branch(IDEX_branch_r),
+        .func3_0(IDEX_func3_r[0]),
+        .x(forwarding_x),
+        .y(forwarding_y),
+        .jump(branch_flush)
+    );
     ImmGen ig(
         .IR( IFID_inst_r[31:0] )            ,
         .Imm( IDEX_imm_w )
@@ -296,17 +245,15 @@ module RISCV_Pipeline(
 
     // control unit dealing hazard 
     // 0 when flush or bubble 
-
-    // TODO...
-    // assign IDEX_jal_w = ( j_flush | branch_flush | hazard_stall )?  1'b0: jal;
-    // assign IDEX_jalr_w = ( j_flush | branch_flush | hazard_stall )? 1'b0: jalr;
-    // assign IDEX_branch_w = ( j_flush | branch_flush | hazard_stall )? 1'b0: branch;
-    assign IDEX_MemRead_w = (  hazard_stall |bubble)? 1'b0: memread;
-    assign IDEX_MemToReg_w = ( hazard_stall |bubble)? 1'b0: memtoreg;
-    assign IDEX_MemWrite_w = (  hazard_stall |bubble)? 1'b0: memwrite;
-    assign IDEX_alusrc_w = (  hazard_stall |bubble)? 1'b0: alusrc;
-    assign IDEX_RegWrite_w = (  hazard_stall |bubble)? 1'b0: regwrite;
-    assign IDEX_aluop_w = (  hazard_stall |bubble)? 2'b0: aluop;
+    assign IDEX_jal_w = ( j_flush | branch_flush | hazard_stall )?  1'b0: jal;
+    assign IDEX_jalr_w = ( j_flush | branch_flush | hazard_stall )? 1'b0: jalr;
+    assign IDEX_branch_w = ( j_flush | branch_flush | hazard_stall )? 1'b0: branch;
+    assign IDEX_MemRead_w = ( j_flush | branch_flush | hazard_stall )? 1'b0: memread;
+    assign IDEX_MemToReg_w = ( j_flush | branch_flush | hazard_stall )? 1'b0: memtoreg;
+    assign IDEX_MemWrite_w = ( j_flush | branch_flush | hazard_stall )? 1'b0: memwrite;
+    assign IDEX_alusrc_w = ( j_flush | branch_flush | hazard_stall )? 1'b0: alusrc;
+    assign IDEX_RegWrite_w = ( j_flush | branch_flush | hazard_stall )? 1'b0: regwrite;
+    assign IDEX_aluop_w = ( j_flush | branch_flush | hazard_stall )? 2'b0: aluop;
 
 
     assign IDEX_pc_addr_w = IFID_pc_addr_r;
@@ -322,25 +269,24 @@ module RISCV_Pipeline(
     // if jump, flush ex stage
     assign EXMEM_RegWrite_w =  IDEX_RegWrite_r;
     assign EXMEM_MemToReg_w =  IDEX_MemToReg_r;
-    //assign EXMEM_jal_w      =  IDEX_jal_r;
-    //assign EXMEM_jalr_w     =  IDEX_jalr_r;
-    //assign EXMEM_branch_w   =  IDEX_branch_r;
-    assign EXMEM_jump_w       =  IDEX_jump_r;
+    assign EXMEM_jal_w      =  IDEX_jal_r;
+    assign EXMEM_jalr_w     =  IDEX_jalr_r;
+    assign EXMEM_branch_w   =  IDEX_branch_r;
     assign EXMEM_MemRead_w  =  IDEX_MemRead_r;
     assign EXMEM_MemWrite_w =  IDEX_MemWrite_r;
 
     // assign EXMEM_jalr_addr_w = IDEX_imm_r + forwarding_x; //alu_in_x is forwarding data1, which is the address jalr will go
-    //assign EXMEM_branch_or_jal_addr_w = IDEX_imm_r + IDEX_pc_addr_r;
+    assign EXMEM_branch_or_jal_addr_w = IDEX_imm_r + IDEX_pc_addr_r;
 
-    //assign EXMEM_jalr_addr_w = (forward_a_ex[1])? IDEX_imm_r + EXMEM_alu_out_r:
-    //                           (forward_a_ex[0])? IDEX_imm_r + wdata          :
-    //                                              IDEX_imm_r + IDEX_rdata1_r  ;
+    assign EXMEM_jalr_addr_w = (forward_a_ex[1])? IDEX_imm_r + EXMEM_alu_out_r:
+                               (forward_a_ex[0])? IDEX_imm_r + wdata          :
+                                                  IDEX_imm_r + IDEX_rdata1_r  ;
 
-    wire [31:0] EX_stage_pcadd4_2;
-    assign EX_stage_pcadd4_2= (IDEX_pcadd_r) ? 4 : 2;
+    wire [31:0] EX_stage_add_4_or_2;
+    assign EX_stage_add_4_or_2 = (IDEX_pcadd_r) ? 4 : 2;
     assign EXMEM_wdata_w    = {forwarding_y[7:0], forwarding_y[15:8], forwarding_y[23:16], forwarding_y[31:24] };
     assign EXMEM_rd_addr_w  = IDEX_rd_addr_r;
-    assign EXMEM_pc_add4_w  = IDEX_pc_addr_r + EX_stage_pcadd4_2;
+    assign EXMEM_pc_add4_w  = IDEX_pc_addr_r + EX_stage_add_4_or_2;
 
 
     wire  [31:0]    alu_in_y;
@@ -370,7 +316,7 @@ module RISCV_Pipeline(
     
     assign  MEMWB_RegWrite_w = EXMEM_RegWrite_r;
     assign  MEMWB_MemToReg_w = EXMEM_MemToReg_r;
-    assign  MEMWB_alu_out_w  = (EXMEM_jump_r) ? EXMEM_pc_add4_r: EXMEM_alu_out_r;
+    assign  MEMWB_alu_out_w  = EXMEM_alu_out_r;
     
     assign  DCACHE_ren  = EXMEM_MemRead_r;
     assign  DCACHE_wen  = EXMEM_MemWrite_r;
@@ -379,19 +325,17 @@ module RISCV_Pipeline(
     assign  MEMWB_rdata_w = { DCACHE_rdata[7:0], DCACHE_rdata[15:8], DCACHE_rdata[23:16], DCACHE_rdata[31:24] };
     assign  MEMWB_rd_addr_w = EXMEM_rd_addr_r;
     assign  MEMWB_pc_add4_w = EXMEM_pc_add4_r;
-    //assign  MEMWB_jal_w = EXMEM_jal_r;
-    //assign  MEMWB_jalr_w = EXMEM_jalr_r;
+    assign  MEMWB_jal_w = EXMEM_jal_r;
+    assign  MEMWB_jalr_w = EXMEM_jalr_r;
 
     assign  ICACHE_addr = pc_r[31:1];
 
-    // TODO...
-    assign  IFID_inst_w =   (hazard_stall|bubble)?         IFID_inst_r  :  
-                            (ID_branch_jump|IDEX_jump_w)      ? 32'h0000007f : // flush control unit (bubble)                   
+    assign  IFID_inst_w = (hazard_stall)?         IFID_inst_r  :
+                          (branch_flush|j_flush)? 32'h0000007f : // flush control unit (bubble)
     { ICACHE_rdata[7:0], ICACHE_rdata[15:8], ICACHE_rdata[23:16], ICACHE_rdata[31:24] };
   
-    assign  IFID_pc_addr_w = (hazard_stall|bubble) ? IFID_pc_addr_r :pc_r;
+    assign  IFID_pc_addr_w = pc_r;
     assign  IFID_pcadd_w = ICACHE_pcadd;
-
 
     // proc_stall
     wire    proc_stall;
@@ -428,13 +372,11 @@ module RISCV_Pipeline(
 			pc_r 						<= 0;
             IFID_pc_addr_r              <= 0;
             IFID_inst_r                 <= 32'h00000013; //nop;
-            IFID_pcadd_r                <= 1'b1;
             IDEX_RegWrite_r             <= 0;
             IDEX_MemToReg_r             <= 0;
-            //IDEX_jal_r                  <= 0;
-            //IDEX_jalr_r                 <= 0;
-            //IDEX_branch_r               <= 0;
-            IDEX_jump_r                 <= 0;
+            IDEX_jal_r                  <= 0;
+            IDEX_jalr_r                 <= 0;
+            IDEX_branch_r               <= 0;
             IDEX_MemRead_r              <= 0;
             IDEX_MemWrite_r             <= 0;
             IDEX_aluop_r                <= 0;
@@ -448,13 +390,11 @@ module RISCV_Pipeline(
             IDEX_func7_r                <= 0;
             IDEX_func3_r                <= 0;
             IDEX_rd_addr_r              <= 0;
-            IDEX_pcadd_r                <= 1'b1;
             EXMEM_RegWrite_r            <= 0;
             EXMEM_MemToReg_r            <= 0;
-            //EXMEM_jal_r                 <= 0;
-            //EXMEM_jalr_r                <= 0;
-            //EXMEM_branch_r              <= 0;
-            EXMEM_jump_r                <= 0;
+            EXMEM_jal_r                 <= 0;
+            EXMEM_jalr_r                <= 0;
+            EXMEM_branch_r              <= 0;
             EXMEM_MemRead_r             <= 0;
             EXMEM_MemWrite_r            <= 0;
             // EXMEM_jalr_addr_r           <= 0;
@@ -470,21 +410,67 @@ module RISCV_Pipeline(
             MEMWB_rdata_r               <= 0;
             MEMWB_rd_addr_r             <= 0;
             MEMWB_pc_add4_r             <= 0;
-            //MEMWB_jal_r                 <= 0;
-            //MEMWB_jalr_r                <= 0;
+            MEMWB_jal_r                 <= 0;
+            MEMWB_jalr_r                <= 0;
         end
         else begin
-            if(~proc_stall) begin
+            if(proc_stall) begin
+				pc_r					<= pc_r;
+                IFID_pc_addr_r          <= IFID_pc_addr_r;
+                IFID_inst_r             <= IFID_inst_r;
+                IFID_pcadd_r            <= IFID_pcadd_r;
+                IDEX_RegWrite_r         <= IDEX_RegWrite_r;
+                IDEX_MemToReg_r         <= IDEX_MemToReg_r;
+                IDEX_jal_r              <= IDEX_jal_r;
+                IDEX_jalr_r             <= IDEX_jalr_r;
+                IDEX_branch_r           <= IDEX_branch_r;
+                IDEX_MemRead_r          <= IDEX_MemRead_r;
+                IDEX_MemWrite_r         <= IDEX_MemWrite_r;
+                IDEX_aluop_r            <= IDEX_aluop_r;
+                IDEX_alusrc_r           <= IDEX_alusrc_r;
+                IDEX_pc_addr_r          <= IDEX_pc_addr_r;
+                IDEX_rs1_r              <= IDEX_rs1_r;
+                IDEX_rs2_r              <= IDEX_rs2_r;
+                IDEX_rdata1_r           <= IDEX_rdata1_r;
+                IDEX_rdata2_r           <= IDEX_rdata2_r;
+                IDEX_imm_r              <= IDEX_imm_r;
+                IDEX_func7_r            <= IDEX_func7_r;
+                IDEX_func3_r            <= IDEX_func3_r;
+                IDEX_rd_addr_r          <= IDEX_rd_addr_r;
+                IDEX_pcadd_r            <= IDEX_pcadd_r;
+                EXMEM_RegWrite_r        <= EXMEM_RegWrite_r;
+                EXMEM_MemToReg_r        <= EXMEM_MemToReg_r;
+                EXMEM_jal_r             <= EXMEM_jal_r;
+                EXMEM_jalr_r            <= EXMEM_jalr_r;
+                EXMEM_branch_r          <= EXMEM_branch_r;
+                EXMEM_MemRead_r         <= EXMEM_MemRead_r;
+                EXMEM_MemWrite_r        <= EXMEM_MemWrite_r;
+                // EXMEM_jalr_addr_r       <= EXMEM_jalr_addr_r;
+                // EXMEM_branch_or_jal_addr_r <= EXMEM_branch_or_jal_addr_r;
+                EXMEM_alu_out_r         <= EXMEM_alu_out_r;
+                // EXMEM_alu_zero_r        <= EXMEM_alu_zero_r;
+                EXMEM_wdata_r           <= EXMEM_wdata_r;
+                EXMEM_rd_addr_r         <= EXMEM_rd_addr_r;
+                EXMEM_pc_add4_r         <= EXMEM_pc_add4_r;
+                MEMWB_RegWrite_r        <= MEMWB_RegWrite_r;
+                MEMWB_MemToReg_r        <= MEMWB_MemToReg_r;
+                MEMWB_alu_out_r         <= MEMWB_alu_out_r;
+                MEMWB_rdata_r           <= MEMWB_rdata_r;
+                MEMWB_rd_addr_r         <= MEMWB_rd_addr_r;
+                MEMWB_pc_add4_r         <= MEMWB_pc_add4_r;
+                MEMWB_jal_r             <= MEMWB_jal_r;
+                MEMWB_jalr_r            <= MEMWB_jalr_r;
+            end
+            else begin
 				pc_r					<= pc_w;
                 IFID_pc_addr_r          <= IFID_pc_addr_w;
                 IFID_inst_r             <= IFID_inst_w;
                 IFID_pcadd_r            <= IFID_pcadd_w;
                 IDEX_RegWrite_r         <= IDEX_RegWrite_w;
                 IDEX_MemToReg_r         <= IDEX_MemToReg_w;
-                //IDEX_jal_r              <= IDEX_jal_w;
-                //IDEX_jalr_r             <= IDEX_jalr_w;
-                //IDEX_branch_r           <= IDEX_branch_w;
-                IDEX_jump_r             <= IDEX_jump_w;
+                IDEX_jal_r              <= IDEX_jal_w;
+                IDEX_jalr_r             <= IDEX_jalr_w;
+                IDEX_branch_r           <= IDEX_branch_w;
                 IDEX_MemRead_r          <= IDEX_MemRead_w;
                 IDEX_MemWrite_r         <= IDEX_MemWrite_w;
                 IDEX_aluop_r            <= IDEX_aluop_w;
@@ -501,10 +487,9 @@ module RISCV_Pipeline(
                 IDEX_pcadd_r            <= IDEX_pcadd_w;
                 EXMEM_RegWrite_r        <= EXMEM_RegWrite_w;
                 EXMEM_MemToReg_r        <= EXMEM_MemToReg_w;
-                //EXMEM_jal_r             <= EXMEM_jal_w;
-                //EXMEM_jalr_r            <= EXMEM_jalr_w;
-                //EXMEM_branch_r          <= EXMEM_branch_w;
-                EXMEM_jump_r            <= EXMEM_jump_w;
+                EXMEM_jal_r             <= EXMEM_jal_w;
+                EXMEM_jalr_r            <= EXMEM_jalr_w;
+                EXMEM_branch_r          <= EXMEM_branch_w;
                 EXMEM_MemRead_r         <= EXMEM_MemRead_w;
                 EXMEM_MemWrite_r        <= EXMEM_MemWrite_w;
                 // EXMEM_jalr_addr_r       <= EXMEM_jalr_addr_w;
@@ -520,8 +505,8 @@ module RISCV_Pipeline(
                 MEMWB_rdata_r               <= MEMWB_rdata_w;
                 MEMWB_rd_addr_r             <= MEMWB_rd_addr_w;
                 MEMWB_pc_add4_r             <= MEMWB_pc_add4_w;
-                //MEMWB_jal_r                 <= MEMWB_jal_w;
-                //MEMWB_jalr_r                <= MEMWB_jalr_w;
+                MEMWB_jal_r                 <= MEMWB_jal_w;
+                MEMWB_jalr_r                <= MEMWB_jalr_w;
             end
         end
     end
@@ -926,8 +911,6 @@ module Control_unit(
 
 endmodule
 
-
-/*
 module EX_branch(
     branch,
     func3_0,
@@ -946,51 +929,5 @@ wire beq, bne;
 assign bne = (|(x^y));
 assign beq = ~bne;
 assign jump = (func3_0)? bne && branch: beq && branch;
-
-endmodule
-*/
-
-module ID_jump(
-    pc,
-    offset,
-    rdata1,
-    forward_data1,
-    forward_data2,
-    jal_or_branch_addr,
-    jalr_addr1,
-    jalr_addr2,
-    jalr_addr3
-);
-    input  [31:0] pc, offset, rdata1, forward_data1, forward_data2;
-    output [31:0] jal_or_branch_addr, jalr_addr1, jalr_addr2, jalr_addr3;
-
-    assign jal_or_branch_addr   = pc + offset;
-    assign jalr_addr1           = rdata1 + offset;
-    assign jalr_addr2           = forward_data1 + offset;
-    assign jalr_addr3           = forward_data2 + offset;
-
-
-endmodule
-
-module EX_to_ID_bubble(
-    IDEX_rd_addr,
-    IFID_rs1,
-    IFID_rs2,
-    IDEX_regWrite,
-    ID_branch_or_jalr,
-    Bubble
-);
-    input [4:0]IDEX_rd_addr;
-    input [4:0]IFID_rs1;
-    input [4:0]IFID_rs2;
-    input IDEX_regWrite;
-    input ID_branch_or_jalr;
-    output Bubble;
-
-    wire FLAG1, FLAG2;
-    assign FLAG1 = (IFID_rs1==IDEX_rd_addr)&&(IFID_rs1!=5'b0);
-    assign FLAG2 = (IFID_rs2==IDEX_rd_addr)&&(IFID_rs2!=5'b0);
-
-    assign Bubble = (IDEX_regWrite && (FLAG1|FLAG2)) && ID_branch_or_jalr;
 
 endmodule

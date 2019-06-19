@@ -967,7 +967,7 @@ module EX_to_ID_bubble(
     input [4:0]IFID_rs1;
     input [4:0]IFID_rs2;
     input IDEX_regWrite;
-    input ID_branch_or_jalr,
+    input ID_branch_or_jalr;
     output Bubble;
 
     wire FLAG1, FLAG2;
