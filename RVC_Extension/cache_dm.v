@@ -39,7 +39,7 @@ module cache(
     input  [127:0] mem_rdata;
     input          mem_ready;
     output  reg    mem_read, mem_write;
-    output  reg [27:0] mem_addr;
+    output [27:0]  mem_addr;
     output [127:0] mem_wdata;
 
 //==== wire/reg definition ================================
@@ -67,9 +67,12 @@ module cache(
     reg [127:0] wdata;
 
     // for buffer state
-    reg  [127:0]  wdata_buf_w;
-    reg  [127:0]  wdata_buf_r;
-    //reg  [27:0]   mem_addr_buf_w, mem_addr_buf_r;
+    //reg  [127:0]  wdata_buf_w;
+    //reg  [127:0]  wdata_buf_r;
+    reg  [27:0]   mem_addr_buf_w, mem_addr_buf_r;
+    wire [27:0]   mem_waddr;
+
+    assign mem_waddr = { tag_r[proc_addr[4:2]], proc_addr[4:2] };
 
 
 //==== Finite State Machine ===============================
@@ -86,17 +89,22 @@ always@(*) begin
     case ( state )
         START:
             begin 
-                if( hit_or_miss ) begin
-                    // hit!!
-                    state_nxt = START;
-                end
-                else begin
-                    if( dirty ) begin
-                        state_nxt = WRITE_BACK;
+                if ((proc_read|proc_write)) begin
+                    if( hit_or_miss ) begin
+                        // hit!!
+                        state_nxt = START;
                     end
                     else begin
-                        state_nxt = ALLOCATE;
+                        if( dirty ) begin
+                            state_nxt = WRITE_BACK;
+                        end
+                        else begin
+                            state_nxt = ALLOCATE;
+                        end
                     end
+                end
+                else begin
+                    state_nxt = state;
                 end
             end
         ALLOCATE:
@@ -129,6 +137,7 @@ assign proc_rdata = word_r[proc_addr[4:0]];
 assign proc_stall = stall;
 assign mem_wdata  = wdata;
 assign hit_or_miss = ({valid_r[proc_addr[4:2]],tag_r[proc_addr[4:2]]} == {1'b1,proc_addr[29:5]});
+assign mem_addr = mem_addr_buf_r;
 
 always@(*) begin
     //==== Default value ==================================
@@ -138,9 +147,8 @@ always@(*) begin
     wdata =         128'b0;
     mem_read =      0;
     mem_write =     0;
-    mem_addr   = proc_addr[29:2];
-    wdata_buf_w = wdata_buf_r;
-    //mem_addr_buf_w = mem_addr_buf_r;
+    //wdata_buf_w = mem_rdata;
+    mem_addr_buf_w = mem_addr_buf_r;
     for (i=0;i<8;i=i+1) begin
         valid_w[i] = valid_r[i]; 
         dirty_w[i] = dirty_r[i]; 
@@ -209,8 +217,15 @@ always@(*) begin
                 end
                 else begin
                     // miss
-                    stall = 1'b1;
-                    
+                    if((proc_read|proc_write)) begin
+                        stall = 1'b1;
+                        if(dirty) mem_write = 1'b1;
+                        else      mem_read  = 1'b1;
+                    end
+                    else begin
+                        stall = 1'b0;
+                    end
+
                 end
             end
         ALLOCATE:
@@ -228,38 +243,24 @@ always@(*) begin
                 endcase
                 valid_w[proc_addr[4:2]] = 1'b1;
                 dirty_w[proc_addr[4:2]] = 1'b0;
-                if ( mem_ready ) begin
-                    //tag_w[proc_addr[4:2]] = proc_addr[29:5];
-                    wdata_buf_w = mem_rdata;
-                end
-                else begin
-                    mem_addr = proc_addr[29:2];
-                    mem_read =  1'b1;
-                    mem_write = 1'b0;
-                end
+                mem_addr_buf_w = proc_addr[29:2];
+                mem_read =  1'b1;
+                mem_write = 1'b0;
             end
         WRITE_BACK:
             begin
                 stall = 1'b1;
-                mem_addr = { tag_r[proc_addr[4:2]], proc_addr[4:2] };
+                mem_addr_buf_w = mem_waddr;
                 wdata = { {word_r[{proc_addr[4:2], 2'b11}]}, {word_r[{proc_addr[4:2], 2'b10}]},
                                       {word_r[{proc_addr[4:2], 2'b01}]}, {word_r[{proc_addr[4:2], 2'b00}]} };
-                if ( mem_ready ) begin
-                    mem_addr = proc_addr[29:2];
-                    mem_read =  1'b1;
-                    mem_write = 1'b0;
-                end
-                else begin
-                    mem_write = 1'b1;
-                    mem_read = 1'b0;
-                end
+                mem_write = 1'b1;
+                mem_read = 1'b0;
             end
         BUFFER:
             begin
                 stall = 1'b1;
-                
                 {{word_w[{proc_addr[4:2], 2'b11}]}, {word_w[{proc_addr[4:2], 2'b10}]},
-                {word_w[{proc_addr[4:2], 2'b01}]}, {word_w[{proc_addr[4:2], 2'b00}]}} = wdata_buf_r;
+                {word_w[{proc_addr[4:2], 2'b01}]}, {word_w[{proc_addr[4:2], 2'b00}]}} = mem_rdata;
             end
     endcase
 end
@@ -274,8 +275,8 @@ always@( posedge clk or posedge proc_reset) begin
         for (i=0;i<32;i=i+1) begin
             word_r[i]  <= 32'b0; // reset words
         end
-        wdata_buf_r <= 0;
-        //mem_addr_buf_r <=0;
+        //wdata_buf_r <= 0;
+        mem_addr_buf_r <=0;
     end
     else begin
         for (i=0;i<8;i=i+1) begin
@@ -286,8 +287,8 @@ always@( posedge clk or posedge proc_reset) begin
         for (i=0;i<32;i=i+1) begin
             word_r[i]  <= word_w[i]; // reset words
         end
-        wdata_buf_r <= wdata_buf_w;
-       // mem_addr_buf_r <= mem_addr_buf_w;
+        //wdata_buf_r <= wdata_buf_w;
+        mem_addr_buf_r <= mem_addr_buf_w;
     end
 end
 
