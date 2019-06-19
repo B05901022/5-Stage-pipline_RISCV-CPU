@@ -1,7 +1,9 @@
 #You may modified the clock constraints 
 #or add more constraints for your design
 ####################################################
-set cycle  4        
+read_verilog CHIP.v
+current_design CHIP.v
+set cycle  5        
 ####################################################
 
 
@@ -31,11 +33,7 @@ set_output_delay $t_out -clock CLK [all_outputs]
 #Compile and save files
 #You may modified setting of compile 
 #####################################################
-current_design [get_designs CHIP]
-compile
-write_sdf -version 2.1 CHIP_comp_syn.sdf
-write -format verilog -hier -output CHIP_comp_syn.v
-write -format ddc     -hier -output CHIP_comp_syn.ddc  
+#current_design [get_designs CHIP]  
 #####################################################  
 
 

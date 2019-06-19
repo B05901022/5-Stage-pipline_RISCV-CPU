@@ -3,7 +3,7 @@
 
 `timescale 1 ns/10 ps
 
-`define CYCLE 10 // You can modify your clock frequency
+`define CYCLE 32 // You can modify your clock frequency
 
 `define DMEM_INIT "D_mem"
 `define SDFFILE   "./CHIP_syn.sdf"	// Modify your SDF file name

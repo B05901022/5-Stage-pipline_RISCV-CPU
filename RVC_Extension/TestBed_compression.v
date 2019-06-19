@@ -1,8 +1,8 @@
 `timescale 1 ns/10 ps
-`define	TestPort	30'h10
-`define	BeginSymbol	32'h00000168
-`define	EndSymbol	32'hFFFFFD5D
-`define	CheckNum	5'd19
+`define TestPort    30'h10
+`define BeginSymbol 32'h00000168
+`define EndSymbol   32'hFFFFFD5D
+`define CheckNum    5'd19
 
 module	TestBed(
 	clk,
@@ -89,13 +89,8 @@ module	TestBed(
 							if( addr==`TestPort && wen && state==0 )
 							begin
 								nxtaddr = curaddr + 1;
-								$display("\nyour answer:%d  correct answer: %d\n", data_modify, answer);
-								if( data_modify != answer ) begin
-									//$display("Wrong!");
+								if( data_modify != answer )
 									nxt_error_num = error_num + 8'd1;
-								end else begin 
-									//$display("\t\tRight!");
-								end
 							end
 							nxtstate = curstate;
 							if( curaddr==`CheckNum )	
@@ -150,24 +145,24 @@ module	TestBed(
 	begin
 		answer = 0;
 		case( curaddr )
-		5'd0 :	answer = 32'h0000DEAD;
-		5'd1 :	answer = 32'h0000F625;
-		5'd2 :	answer = 32'h6F568000;
-		5'd3 :	answer = 32'h37AB4000;
-		5'd4 :	answer = 32'h8B2C2000;
-		5'd5 :	answer = 32'h45961000;
-		5'd6 :	answer = 32'h22CB0800;
-		5'd7 :	answer = 32'h80BC0400;
-		5'd8 :	answer = 32'h405E0200;
-		5'd9 :	answer = 32'h202F0100;
-		5'd10:	answer = 32'h10178080;
-		5'd11:	answer = 32'h77624040;
-		5'd12:	answer = 32'hAB07A020;
-		5'd13:	answer = 32'h5583D010;
-		5'd14:	answer = 32'h9A186808;
-		5'd15:	answer = 32'hBC62B404;
-		5'd16:	answer = 32'hCD87DA02;
-		5'd17:	answer = 32'hD61A6D01;
+		5'd0 :	answer = 32'h00001234;
+		5'd1 :	answer = 32'h0000ABCD;
+		5'd2 :	answer = 32'h091A0000;
+		5'd3 :	answer = 32'h048D0000;
+		5'd4 :	answer = 32'h0B608000;
+		5'd5 :	answer = 32'h0ECA4000;
+		5'd6 :	answer = 32'h07652000;
+		5'd7 :	answer = 32'h03B29000;
+		5'd8 :	answer = 32'h0AF34800;
+		5'd9 :	answer = 32'h0E93A400;
+		5'd10:	answer = 32'h1063D200;
+		5'd11:	answer = 32'h114BE900;
+		5'd12:	answer = 32'h08A5F480;
+		5'd13:	answer = 32'h0D6CFA40;
+		5'd14:	answer = 32'h06B67D20;
+		5'd15:	answer = 32'h0C753E90;
+		5'd16:	answer = 32'h063A9F48;
+		5'd17:	answer = 32'h0C374FA4;
 		5'd18:	answer = `EndSymbol;
 		endcase			
 	end

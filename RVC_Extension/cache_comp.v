@@ -34,7 +34,7 @@ module cache_read_only(
     input   [30:0] proc_addr;
     //input   [31:0] proc_wdata;
     output         proc_stall;
-    output  reg [31:0] proc_rdata;
+    output  [31:0] proc_rdata;
     output         proc_pcadd;
     // memory interface
     input  [127:0] mem_rdata;
@@ -141,10 +141,12 @@ assign little_endian_decomp_instr = { decomp_instr[ 7: 0], decomp_instr[15: 8],
                                       decomp_instr[23:16], decomp_instr[31:24] };
 
 assign proc_pcadd = curr_32_16;
+reg [31:0] rdata;
+assign proc_rdata = rdata;
 
 always@(*) begin
     //==== Default value ==================================
-    proc_rdata = (curr_32_16) ? { word_r[proc_addr[5:0]], word_r[next_addr[5:0]] }
+    rdata = (curr_32_16) ? { word_r[proc_addr[5:0]], word_r[next_addr[5:0]] }
                               :   little_endian_decomp_instr; 
     stall =         1'b0;
     mem_read =      1'b0;
