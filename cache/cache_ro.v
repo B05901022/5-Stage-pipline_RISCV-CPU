@@ -66,8 +66,8 @@ module cache_read_only(
     reg [127:0] wdata;
 
     // for buffer state
-    reg  [127:0]  wdata_buf_w;
-    reg  [127:0]  wdata_buf_r;
+    //reg  [127:0]  wdata_buf_w;
+    //reg  [127:0]  wdata_buf_r;
     //reg  [27:0]   mem_addr_buf_w, mem_addr_buf_r;
 
 
@@ -133,7 +133,7 @@ always@(*) begin
     mem_read =      0;
     mem_write =     0;
     mem_addr   = proc_addr[29:2];
-    wdata_buf_w = mem_rdata;
+    //wdata_buf_w = mem_rdata;
     //mem_addr_buf_w = mem_addr_buf_r;
     for (i=0;i<8;i=i+1) begin
         valid_w[i] = valid_r[i]; 
@@ -182,7 +182,7 @@ always@(*) begin
             begin
                 stall = 1'b1;
                 {{word_w[{proc_addr[4:2], 2'b11}]}, {word_w[{proc_addr[4:2], 2'b10}]},
-                {word_w[{proc_addr[4:2], 2'b01}]}, {word_w[{proc_addr[4:2], 2'b00}]}} = wdata_buf_r;
+                {word_w[{proc_addr[4:2], 2'b01}]}, {word_w[{proc_addr[4:2], 2'b00}]}} = mem_rdata;
             end
         default:
             begin
@@ -203,7 +203,7 @@ always@( posedge clk or posedge proc_reset) begin
         for (i=0;i<32;i=i+1) begin
             word_r[i]  <= 32'b0; // reset words
         end
-        wdata_buf_r <= 0;
+        //wdata_buf_r <= 0;
         //mem_addr_buf_r <=0;
     end
     else begin
@@ -215,7 +215,7 @@ always@( posedge clk or posedge proc_reset) begin
         for (i=0;i<32;i=i+1) begin
             word_r[i]  <= word_w[i]; // reset words
         end
-        wdata_buf_r <= wdata_buf_w;
+        //wdata_buf_r <= wdata_buf_w;
        // mem_addr_buf_r <= mem_addr_buf_w;
     end
 end

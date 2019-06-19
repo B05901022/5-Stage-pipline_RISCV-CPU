@@ -71,11 +71,11 @@ module cache_read_only(
 
     // for circuit output
     reg         stall;
-    reg [127:0] wdata;
+    //reg [127:0] wdata;
 
     //for buffer state
-    reg  [127:0]  wdata_buf_w;
-    reg  [127:0]  wdata_buf_r;
+    //reg  [127:0]  wdata_buf_w;
+    //reg  [127:0]  wdata_buf_r;
     //reg  [27:0]   mem_addr_buf_w, mem_addr_buf_r;
     //wire [27:0]   mem_waddr;
 
@@ -130,7 +130,6 @@ end
 assign proc_rdata = (hit_0) ? word_r[{set_idx, 1'b0, proc_addr[1:0]}]: 
                               word_r[{set_idx, 1'b1, proc_addr[1:0]}];
 assign proc_stall = stall;
-assign mem_wdata  = wdata;
 
 // for hit or miss
 assign set_idx = proc_addr[3:2];
@@ -148,10 +147,10 @@ assign mem_addr = proc_addr[29:2];
 always@(*) begin
     //==== Default value ==================================
     stall =         1'b0;
-    wdata =         128'b0;
+    //wdata =         128'b0;
     mem_read =      0;
     mem_write =     0;
-    wdata_buf_w = mem_rdata;
+    //wdata_buf_w = mem_rdata;
 
     //hit_or_miss = 1'b0;
     for (i=0;i<8;i=i+1) begin
@@ -208,7 +207,7 @@ always@(*) begin
             begin
                 stall = 1'b1;
                 {{word_w[{idx, 2'b11}]}, {word_w[{idx, 2'b10}]},
-                {word_w[{idx, 2'b01}]}, {word_w[{idx, 2'b00}]}} = wdata_buf_r;
+                {word_w[{idx, 2'b01}]}, {word_w[{idx, 2'b00}]}} = mem_rdata;
                 set_flag_w[set_idx] = ~set_flag_r[set_idx];
             end
     endcase
@@ -227,7 +226,7 @@ always@( posedge clk or posedge proc_reset) begin
         for (i=0;i<4;i=i+1) begin
             set_flag_r[i] = 1'b0;
         end
-        wdata_buf_r <= 0;
+        //wdata_buf_r <= 0;
         //mem_addr_buf_r <= 0;
     end
     else begin
@@ -242,7 +241,7 @@ always@( posedge clk or posedge proc_reset) begin
         for (i=0;i<32;i=i+1) begin
             word_r[i]  <= word_w[i]; // reset words
         end
-        wdata_buf_r <= wdata_buf_w;
+        //wdata_buf_r <= wdata_buf_w;
         //mem_addr_buf_r <= mem_addr_buf_w;
     end
 end

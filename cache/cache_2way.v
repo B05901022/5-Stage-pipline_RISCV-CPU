@@ -74,8 +74,8 @@ module cache(
     reg [127:0] wdata;
 
     //for buffer state
-    reg  [127:0]  wdata_buf_w;
-    reg  [127:0]  wdata_buf_r;
+    //reg  [127:0]  wdata_buf_w;
+    //reg  [127:0]  wdata_buf_r;
     reg  [27:0]   mem_addr_buf_w, mem_addr_buf_r;
     wire [27:0]   mem_waddr;
 
@@ -161,7 +161,7 @@ always@(*) begin
     wdata =         128'b0;
     mem_read =      0;
     mem_write =     0;
-    wdata_buf_w = mem_rdata;
+    //wdata_buf_w = mem_rdata;
     mem_addr_buf_w = mem_addr_buf_r;
 
     //hit_or_miss = 1'b0;
@@ -229,7 +229,7 @@ always@(*) begin
             begin
                 stall = 1'b1;
                 {{word_w[{idx, 2'b11}]}, {word_w[{idx, 2'b10}]},
-                {word_w[{idx, 2'b01}]}, {word_w[{idx, 2'b00}]}} = wdata_buf_r;
+                {word_w[{idx, 2'b01}]}, {word_w[{idx, 2'b00}]}} = mem_rdata;
                 set_flag_w[set_idx] = ~set_flag_r[set_idx];
             end
     endcase
@@ -248,7 +248,7 @@ always@( posedge clk or posedge proc_reset) begin
         for (i=0;i<4;i=i+1) begin
             set_flag_r[i] = 1'b0;
         end
-        wdata_buf_r <= 0;
+        //wdata_buf_r <= 0;
         mem_addr_buf_r <= 0;
     end
     else begin
@@ -263,7 +263,7 @@ always@( posedge clk or posedge proc_reset) begin
         for (i=0;i<32;i=i+1) begin
             word_r[i]  <= word_w[i]; // reset words
         end
-        wdata_buf_r <= wdata_buf_w;
+        //wdata_buf_r <= wdata_buf_w;
         mem_addr_buf_r <= mem_addr_buf_w;
     end
 end
