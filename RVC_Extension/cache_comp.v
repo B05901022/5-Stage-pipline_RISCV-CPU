@@ -1,12 +1,12 @@
-`include "./DECOMPRESSIONUNIT.v"
+//`include "./DECOMPRESSIONUNIT.v"
 module cache_read_only(
     clk,
     proc_reset,
     proc_read,
-    proc_write,
+    //proc_write,
     proc_addr,
     proc_rdata,
-    proc_wdata,
+    //proc_wdata,
     proc_stall,
     proc_pcadd,
     mem_read,
@@ -30,9 +30,9 @@ module cache_read_only(
     input          clk;
     // processor interface
     input          proc_reset;
-    input          proc_read, proc_write;
+    input          proc_read; //, proc_write;
     input   [30:0] proc_addr;
-    input   [31:0] proc_wdata;
+    //input   [31:0] proc_wdata;
     output         proc_stall;
     output  reg [31:0] proc_rdata;
     output         proc_pcadd;
@@ -81,7 +81,7 @@ always@(*) begin
     case ( state )
         START:
             begin 
-                if ((proc_read|proc_write)) begin
+                if ((proc_read)) begin
                     if( hit_or_miss  ) begin
                         // hit!!
                         state_nxt = START;
@@ -162,7 +162,7 @@ always@(*) begin
     case ( state ) 
         START:
             begin
-                if((proc_read|proc_write)) begin
+                if((proc_read)) begin
                     if( hit_or_miss) begin
                         // hit
                         stall = 1'b0;

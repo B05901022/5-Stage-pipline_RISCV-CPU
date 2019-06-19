@@ -1,0 +1,4 @@
+read_verilog CHIP.v
+source CHIP_syn.sdc
+report_area
+report_timing

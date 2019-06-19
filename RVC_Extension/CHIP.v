@@ -4,7 +4,7 @@
 `include "./HAZARD_DETECTION_UNIT.v"
 `include "./cache_dm.v"
 `include "./cache_comp.v"
-//`include "./DECOMPRESSIONUNIT.v"
+`include "./DECOMPRESSIONUNIT.v"
 module CHIP (	clk,
 				rst_n,
 //----------for slow_memD------------

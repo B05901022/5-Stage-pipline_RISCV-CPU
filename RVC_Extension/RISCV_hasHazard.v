@@ -165,8 +165,8 @@ module RISCV_Pipeline(
     wire         hazard_stall;
     wire [1:0]   forward_a_ex; //ex stage
     wire [1:0]   forward_b_ex;
-    wire         forward_a_id; //id stage
-    wire         forward_b_id;
+    wire [1:0]   forward_a_id; //id stage
+    wire [1:0]   forward_b_id;
 
     // choose data from forwarding unit 
     wire  [31:0]    forwarding_x;
@@ -214,9 +214,9 @@ module RISCV_Pipeline(
     );
 
     // forwarding ( only forward WB stage )
-    assign IDEX_rdata1_w = (forward_a_id)? wdata          :
+    assign IDEX_rdata1_w = (forward_a_id[0])? wdata          :
                                            busX           ; 
-    assign IDEX_rdata2_w = (forward_b_id)? wdata          :
+    assign IDEX_rdata2_w = (forward_b_id[0])? wdata          :
                                            busY           ; 
     // check branch at EX stage
     EX_branch br(
