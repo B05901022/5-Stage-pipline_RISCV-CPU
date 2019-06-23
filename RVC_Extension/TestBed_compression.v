@@ -12,12 +12,14 @@ module	TestBed(
 	wen,
 	error_num,
 	duration,
-	finish
+	finish,
+	hit_count
 );
 	input			clk, rst;
 	input	[29:0]	addr;
 	input	[31:0]	data;
 	input			wen;
+	input           hit_count;
 
 	output	[7:0]	error_num;
 	output	[15:0]	duration;
@@ -40,10 +42,16 @@ module	TestBed(
 	wire    [31:0]  data_modify;
 
 	reg [31:0] counter;
+	reg [31:0] hit_counter;
 
 	always@( posedge clk or negedge rst ) begin
-		if (~rst) counter = 0;
-		else counter = counter + 1;
+		if (~rst) begin
+			counter = 0;
+			hit_counter = 0;
+		end else begin
+			counter = counter + 1;
+			hit_counter = (hit_count) ? (hit_counter+1) : hit_counter;
+		end
 	end
 		
 	parameter	state_idle 	= 2'b00;
@@ -127,6 +135,7 @@ module	TestBed(
 				$display("\n \\(^o^)/ CONGRATULATIONS!!  The simulation result is PASS!!!\n");
 				$display("============================================================================");
 				$display("Total Cycle: %d", counter);
+				$display("Hit Cycle: %d", hit_counter);
 			end
 		end
 	end

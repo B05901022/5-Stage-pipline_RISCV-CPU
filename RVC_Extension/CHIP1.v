@@ -3,7 +3,7 @@
 `include "./FORWARDING_UNIT.v"
 `include "./HAZARD_DETECTION_UNIT.v"
 `include "./cache_dm.v"
-`include "./cache_comp_2way.v"
+`include "./cache_comp_2way_test.v"
 `include "./DECOMPRESSIONUNIT.v"
 module CHIP (	clk,
 				rst_n,
@@ -24,8 +24,8 @@ module CHIP (	clk,
 //----------for TestBed--------------				
 				DCACHE_addr, 
 				DCACHE_wdata,
-				DCACHE_wen
-				//hit_rate   
+				DCACHE_wen,
+				hit_rate   
 			);
 input			clk, rst_n;
 //--------------------------
@@ -48,7 +48,7 @@ output	[29:0]	DCACHE_addr;
 output	[31:0]	DCACHE_wdata;
 output			DCACHE_wen;
 //--------------------------
-//output hit_rate;
+output hit_rate;
 
 // wire declaration
 wire        ICACHE_ren;
@@ -124,7 +124,7 @@ wire [31:0] DCACHE_rdata;
 		.mem_wdata	(mem_wdata_I) ,
         .mem_rdata  (mem_rdata_I) ,
         .mem_ready  (mem_ready_I) ,
-        .proc_pcadd (ICACHE_pcadd) //RVC
-        //.hit_rate   (hit_rate)      //analysis
+        .proc_pcadd (ICACHE_pcadd), //RVC
+        .hit_rate   (hit_rate)      //analysis
 	);
 endmodule

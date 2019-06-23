@@ -14,6 +14,7 @@ module cache_read_only(
     mem_wdata,
     mem_ready,
     proc_pcadd
+    //hit_rate
 );
 
 //==== parameters definition ==============================
@@ -43,6 +44,8 @@ module cache_read_only(
     output [127:0] mem_wdata;
     output         proc_pcadd;
     assign proc_pcadd = 1'b1;
+
+    //output hit_rate; //for analysis
 
 //==== wire/reg definition ================================
     //for storage
@@ -120,6 +123,7 @@ assign proc_rdata = word_r[proc_addr[4:0]];
 assign proc_stall = stall;
 assign mem_wdata  = 0;
 assign hit_or_miss = ({valid_r[proc_addr[4:2]],tag_r[proc_addr[4:2]]} == {1'b1,proc_addr[29:5]});
+//assign hit_rate = hit_or_miss;
 
 always@(*) begin
     //==== Default value ==================================

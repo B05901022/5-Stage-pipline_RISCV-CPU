@@ -56,7 +56,7 @@ module Final_tb;
 	wire [7:0] error_num;
 	wire [15:0] duration;
 	wire finish;
-	//wire hit;	
+	wire hit;	
 
 	// Note the design is connected at testbench, include:
 	// 1. CHIP (RISCV + D_cache + I_chache)
@@ -83,7 +83,7 @@ module Final_tb;
 				DCACHE_addr,
 				DCACHE_wdata,
 				DCACHE_wen,
-				//hit,
+				hit,
 				);
 	
 	slow_memory slow_memD(
@@ -114,8 +114,8 @@ module Final_tb;
 		.wen        (DCACHE_wen)    ,
 		.error_num  (error_num)     ,
 		.duration   (duration)      ,
-		.finish     (finish)        
-		//.hit_count   (hit)
+		.finish     (finish)        ,
+		.hit_count   (hit)
 	);
 	
 `ifdef SDF

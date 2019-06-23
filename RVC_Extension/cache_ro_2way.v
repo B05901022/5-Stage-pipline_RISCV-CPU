@@ -12,7 +12,9 @@ module cache_read_only(
     mem_addr,
     mem_rdata,
     mem_wdata,
-    mem_ready
+    mem_ready,
+    proc_pcadd
+    //hit_rate
 );
 
 //==== parameters definition ==============================
@@ -41,6 +43,10 @@ module cache_read_only(
     output  reg    mem_read, mem_write;
     output [27:0] mem_addr;
     output [127:0] mem_wdata;
+    output proc_pcadd;
+    assign proc_pcadd = 1'b1;
+
+    //output hit_rate; //for analysis
 
 //==== wire/reg definition ================================
     //for storage
@@ -93,17 +99,12 @@ always@(*) begin
     case ( state )
         START:
             begin 
-                if ((proc_read|proc_write)) begin
-                    if( hit_or_miss  ) begin
-                        // hit!!
-                        state_nxt = START;
-                    end
-                    else begin
-                        state_nxt = ALLOCATE;
-                    end
+                if( hit_or_miss  ) begin
+                    // hit!!
+                    state_nxt = START;
                 end
                 else begin
-                    state_nxt = state;
+                    state_nxt = ALLOCATE;
                 end
             end
         ALLOCATE:
@@ -144,6 +145,8 @@ assign dirty = dirty_r[idx];
 
 assign mem_addr = proc_addr[29:2];
 
+//assign hit_rate = hit_or_miss;
+
 always@(*) begin
     //==== Default value ==================================
     stall =         1'b0;
@@ -171,27 +174,12 @@ always@(*) begin
                 if (hit_or_miss) begin
                     // hit !!
                     stall = 1'b0;
-                    if( proc_write ) begin
-                        if(hit_0) begin
-                            word_w[{set_idx, 1'b0, proc_addr[1:0]}] = proc_wdata;
-                            dirty_w[{set_idx, 1'b0}] = 1'b1;
-                        end
-                        if(hit_1) begin
-                            word_w[{set_idx, 1'b1, proc_addr[1:0]}] = proc_wdata;
-                            dirty_w[{set_idx, 1'b1}] = 1'b1;
-                        end
-                    end
+                    set_flag_w[set_idx] = hit_0;
                 end
                 else begin
                     // miss
-                    if((proc_read|proc_write)) begin
-                        stall = 1'b1;
-                        //if(dirty) mem_write = 1'b1;
-                        mem_read  = 1'b1;
-                    end
-                    else begin
-                        stall = 1'b0;
-                    end                  
+                    stall = 1'b1;
+                    mem_read  = 1'b1;      
                 end
             end
         ALLOCATE:
@@ -208,7 +196,7 @@ always@(*) begin
                 stall = 1'b1;
                 {{word_w[{idx, 2'b11}]}, {word_w[{idx, 2'b10}]},
                 {word_w[{idx, 2'b01}]}, {word_w[{idx, 2'b00}]}} = mem_rdata;
-                set_flag_w[set_idx] = ~set_flag_r[set_idx];
+                //set_flag_w[set_idx] = ~set_flag_r[set_idx];
             end
     endcase
 end

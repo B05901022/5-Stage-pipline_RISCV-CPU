@@ -35,7 +35,7 @@ def underline(n,std=1):
 # modify multiplicand and multiplier here
 # you can also modify the base
 a = int("1234", base=16)#int("CCCC", base=16)
-b = int("ABCD", base=16)#int("8763", base=16)
+b = int("abcd", base=16)#int("8763", base=16)
 
 num_check(a)
 num_check(b)

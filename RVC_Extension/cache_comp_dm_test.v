@@ -15,7 +15,7 @@ module cache_read_only(
     mem_rdata,
     mem_wdata,
     mem_ready,
-    //hit_rate
+    hit_rate
 );
 
 //==== parameters definition ==============================
@@ -44,7 +44,7 @@ module cache_read_only(
     output         mem_write;
     output  reg [27:0] mem_addr;
     output [127:0] mem_wdata;
-    //output hit_rate; //for analysis
+    output hit_rate; //for analysis
 
 //==== wire/reg definition ================================
     //for storage
@@ -127,7 +127,7 @@ assign curr_h_o_m  = ( valid_r[proc_addr[5:3]] && (tag_r[proc_addr[5:3]] == proc
 assign next_h_o_m  = ( valid_r[next_addr[5:3]] && (tag_r[next_addr[5:3]] == next_addr[30:6]) );
 assign hit_or_miss = (curr_32_16) ? (curr_h_o_m && next_h_o_m) : (curr_h_o_m);
 //assign cross_tag_error = ( curr_32_16 && ( curr_h_o_m && (~next_h_o_m) ) );
-//assign hit_rate = hit_or_miss;
+assign hit_rate = hit_or_miss;
 
 wire [15:0] orig_instr;
 wire [31:0] decomp_instr;
@@ -143,8 +143,8 @@ assign proc_rdata = rdata;
 
 always@(*) begin
     //==== Default value ==================================
-    rdata = (curr_32_16) ? { word_r[proc_addr[5:0]], word_r[next_addr[5:0]] } :
-                             little_endian_decomp_instr; 
+    rdata = (curr_32_16) ? { word_r[proc_addr[5:0]], word_r[next_addr[5:0]] }
+                              :   little_endian_decomp_instr; 
     stall =         1'b0;
     mem_read =      1'b0;
     mem_addr   = (cross_tag_error_r) ? next_addr[30:3] : proc_addr[30:3];//{25'b0, next_addr[5:3]} : {25'b0, proc_addr[5:3]};

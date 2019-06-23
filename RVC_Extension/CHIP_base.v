@@ -1,9 +1,9 @@
 // Top module of your design, you cannot modify this module!!
-`include "./RISCV_hasHazard.v"
+`include "./RISCV_hasHazard2.v"
 `include "./FORWARDING_UNIT.v"
 `include "./HAZARD_DETECTION_UNIT.v"
 `include "./cache_dm.v"
-`include "./cache_comp_2way.v"
+`include "./cache_ro_2way.v"
 `include "./DECOMPRESSIONUNIT.v"
 module CHIP (	clk,
 				rst_n,
@@ -53,7 +53,7 @@ output			DCACHE_wen;
 // wire declaration
 wire        ICACHE_ren;
 wire        ICACHE_wen;
-wire [30:0] ICACHE_addr; //RVC
+wire [29:0] ICACHE_addr; //RVC
 wire [31:0] ICACHE_wdata;
 wire        ICACHE_stall;
 wire [31:0] ICACHE_rdata;

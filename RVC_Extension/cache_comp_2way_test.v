@@ -14,7 +14,8 @@ module cache_read_only(
     mem_addr,
     mem_rdata,
     mem_wdata,
-    mem_ready
+    mem_ready,
+    hit_rate
 );
 
 //==== parameters definition ==============================
@@ -43,6 +44,8 @@ module cache_read_only(
     output         mem_write;
     output  reg [27:0] mem_addr;
     output [127:0] mem_wdata;
+    //For analysis
+    output hit_rate;
 
 //==== wire/reg definition ================================
     //for storage
@@ -136,6 +139,9 @@ assign proc_rdata = rdata;
 
 //cross tag error
 reg cross_tag_error_r, cross_tag_error_w;
+
+//For analysis
+assign hit_rate = hit_or_miss;
 
 //==== Finite State Machine ===============================
 always@( posedge clk or posedge proc_reset) begin

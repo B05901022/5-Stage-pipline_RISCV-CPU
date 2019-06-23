@@ -12,7 +12,8 @@ module	TestBed(
 	wen,
 	error_num,
 	duration,
-	finish
+	finish,
+	hit_count
 );
 	input			clk, rst;
 	input	[29:0]	addr;
@@ -22,6 +23,8 @@ module	TestBed(
 	output	[7:0]	error_num;
 	output	[15:0]	duration;
 	output			finish;
+
+	input           hit_count;
 	reg		[7:0]	error_num;
 	reg		[15:0]	duration;
 	reg				finish;
@@ -44,7 +47,19 @@ module	TestBed(
 	parameter	state_report= 2'b10;	
 
 	assign data_modify = {data[7:0],data[15:8],data[23:16],data[31:24]}; // convert little-endian format to readable format
-		
+	
+	integer counter;
+	integer hit_counter;
+	always@( posedge clk or negedge rst) begin
+		if (~rst) begin
+			counter = 0;
+			hit_counter = 0;
+		end else begin
+			counter = counter + 1;
+			hit_counter = hit_counter + hit_count;
+		end
+	end
+
 	always@( posedge clk or negedge rst )						// State-DFF
 	begin
 		if( ~rst )
@@ -119,6 +134,8 @@ module	TestBed(
 				$display("============================================================================");
 				$display("\n \\(^o^)/ CONGRATULATIONS!!  The simulation result is PASS!!!\n");
 				$display("============================================================================");
+				$display("Total cycle: %d",counter);
+				$display("Hit cycle: %d",hit_counter);
 			end
 		end
 	end
